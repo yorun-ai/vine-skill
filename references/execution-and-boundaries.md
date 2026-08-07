@@ -1,6 +1,6 @@
 # Vine Execution, Context, and Error Boundaries
 
-This reference is based on Vine `v0.12.0`. Use it for DI, execution, Filter, context, Actor, trace, timeout, and cross-boundary error tasks. Resolve exact symbols against public GoDoc for the target project's pinned version.
+This reference is based on Vine `v0.12.0`. Use it for DI, execution, Filter, context, Actor, trace, timeout, and cross-boundary error tasks. Resolve exact symbols against public GoDoc for the target project's pinned version. The timeout values here are `v0.12.0` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
@@ -146,7 +146,7 @@ In `v0.12.0`:
 - A generated downstream client inherits the remaining deadline when it retains the injected context.
 - SSE/WebSocket has no total timeout when none is explicitly set, but uses a 60-second traffic-idle timeout.
 
-These are version-specific facts. Check the corresponding documentation and source when the target version differs.
+These are `v0.12.0` version facts (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list). Check the corresponding documentation and source when the target version differs.
 
 A timeout cancels the context but cannot force Go code that ignores cancellation to stop. For Event/Task, an old attempt may continue after timeout and overlap a retry. Check context in long loops, before external I/O, and before irreversible side effects.
 

@@ -18,6 +18,8 @@ Generated Vine applications used for manual validation are disposable fixtures, 
 
 - Preserve version-first behavior. Never silently install or upgrade Vine, skelc, Go, or infrastructure while inspecting a target project.
 - Keep Skel-generated Go and TypeScript boundaries authoritative.
+- Keep new-project delivery server-first with contracts in root `skel/`, generated artifacts in `skeled/`, and Hub seed plus hand-written server code under `src/server/`.
+- Add `src/web/` only after the server is complete and the user explicitly confirms a frontend.
 - Keep structured browser calls on generated vRPC clients; reserve Web/HTTP for binary data and static assets.
 - Match validation claims to the actual runtime topology and commands executed.
 - Keep the core workflow concise and route detailed material into the appropriate reference file.
@@ -54,6 +56,10 @@ python3 scripts/validate_skill.py
 bash -n scripts/start_vine_app.sh
 ```
 
+When the paired Simplified Chinese Skill tree is present at `../../vine-skill`, the package
+validator also checks matching Markdown structure, local links, launcher identity, and example
+artifact behavior across both trees.
+
 Also verify:
 
 - `SKILL.md` has valid frontmatter and the expected Skill name;
@@ -62,6 +68,10 @@ Also verify:
 - Linux and Windows launcher environment variables and lifecycle behavior remain aligned;
 - realistic prompts route to the correct reference material;
 - no generated fixture, database, dependency directory, build output, token, or private key is included.
+
+CI regenerates `references/example-greeting` with skelc `v0.11.1`, builds and tests it against
+Vine `v0.12.0`, runs `go vet`, rejects unformatted Go, and exercises the Windows launcher
+`--check` path with a disposable fixture.
 
 When launcher behavior changes, test `--check`, first-run installation, readiness, occupied-port refusal, and cleanup in a disposable Vine browser-app fixture. Review Windows Batch changes on Windows or in Windows CI when available; otherwise report that limitation explicitly.
 

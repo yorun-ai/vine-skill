@@ -1,6 +1,6 @@
 # Vine Redis, RDB, Logging, and Testing
 
-This reference is based on Vine `v0.12.0`. Use it for infrastructure Components, sensitive logging, and `app/testkit` tasks.
+This reference is based on Vine `v0.12.0`. Use it for infrastructure Components, sensitive logging, and `app/testkit` tasks. Values such as the lock lease here are `v0.12.0` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 

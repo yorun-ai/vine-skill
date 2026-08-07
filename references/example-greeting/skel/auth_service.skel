@@ -1,0 +1,22 @@
+domain greeting
+
+@desc("Login result")
+pub data LoginResult {
+    success: bool
+    username: string?
+    token: string?
+}
+
+@desc("Auth service (login itself is noauth)")
+pub service AuthService {
+    for GreetingActor via client
+    noauth
+    @desc("Login with username and password; returns a session token")
+    method login {
+        input {
+            username: string
+            password: string
+        }
+        output LoginResult
+    }
+}

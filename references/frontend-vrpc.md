@@ -142,7 +142,7 @@ func (h *ConsoleWeb) ProxyFrontend() {
         return
     }
     ctx.Header("Retry-After", "1")
-    ctx.String(http.StatusServiceUnavailable, "frontend development server is unavailable; start it with `cd web && pnpm dev`\n")
+    ctx.String(http.StatusServiceUnavailable, "frontend development server is unavailable; start it with `cd src/web && pnpm dev`\n")
 }
 ```
 
@@ -198,7 +198,7 @@ Use a different, project-specific Dashboard origin and load the seed from the St
 
 ```go
 standalone.NewWithOption[*application.ConsoleApp](standalone.Option{
-    SeedYAMLFile: "./deploy/seed.yaml",
+    SeedYAMLFile: "./src/server/seed/hub.yaml",
     SQLiteFile:   "./data/hub.sqlite",
     DashboardURL: "http://127.0.0.1:7299/",
 }).StartAndWait()
@@ -251,19 +251,30 @@ rem Windows Command Prompt, later runs
 scripts\start_vine_app.bat
 ```
 
-Use `--check` to validate the layout, `go`/`pnpm`, frontend dependencies, and port availability without starting anything. The scripts require only the platform shell plus the project's existing Go and pnpm prerequisites; they must not require Python. They refuse occupied ports rather than killing an existing process. If and only if the project explicitly requires a preparation command, set `VINE_PREPARE_PACKAGE=./cmd/migrate`; never infer a migration from directory names.
+Enter this section and create `src/web/` only after the user explicitly confirms a frontend. Use `--check` to validate root-level `skel/` and `skeled/`, the standard server directories `src/server/` and `src/server/seed/hub.yaml`, the frontend package `src/web/`, `go`/`pnpm`, frontend dependencies, and port availability without starting any process. The scripts require only the platform shell plus the project's existing Go and pnpm prerequisites; they must not require Python. If a port is occupied, stop and report it; do not terminate the existing process. Set `VINE_PREPARE_PACKAGE=./src/server/cmd/migrate` if and only if the project explicitly contains a migration entry and requires a preparation command; never infer a migration from directory names.
+
+A delivery reply cannot just say "the frontend is done" or point the user at the README. The final reply must directly provide:
+
+- The Go, Node.js, pnpm, and other prerequisite versions required by the project.
+- The Linux/macOS first-run and later-run startup commands, and the corresponding Windows Command Prompt commands.
+- The combined launcher's `--check` preflight-only command.
+- The complete access addresses for the business page, public vRPC, and Dashboard, and a clear statement that the private Vite upstream is not a user entry.
+- The install entry to run when dependencies are missing, and, when a port is occupied, the checked port and its owning process. Never terminate an existing process or silently switch ports.
+- When the project has migrations, whether the combined launcher runs them automatically or they must be run manually first; do not invent migration steps when no migration entry exists.
 
 The manual fallback is two terminals:
 
 ```bash
 # Terminal 1
-cd web
+cd src/web
 pnpm install
 pnpm dev
 
 # Terminal 2, from the project root
-go run ./cmd/server
+go run ./src/server/cmd/demo
 ```
+
+Replace the example entry `demo` with the real project name. Do not move existing server directories when adding the frontend.
 
 Visit `http://127.0.0.1:7288/`, not the Vite upstream or Dashboard. Configure the shared vRPC transport once with `http://127.0.0.1:7288/api/invoke` (or the equivalent same-origin `/api/invoke` value); feature code still calls only generated services. If direct Vite-origin browsing is also supported, add a Vite development proxy for `/api/invoke` and the corresponding strict CORS origin rather than changing business calls.
 

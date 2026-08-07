@@ -1,0 +1,6 @@
+domain greeting
+
+@desc("Greeting runtime settings")
+pub config GreetingConfig eternal {
+    defaultPageSize: int
+}

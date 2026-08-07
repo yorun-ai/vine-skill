@@ -1,6 +1,6 @@
 # Vine Runtime, Deployment, and Production Boundaries
 
-This reference is based on Vine `v0.12.0`. Use it for topology, routing, readiness, Hub/Link/Portal, CLI, mTLS, durability, rollout, and failure-drill tasks. CLI flags, default ports, and time constants may change by version. Verify them first with the target binary's `vine version --json` and `vine <command> --help`.
+This reference is based on Vine `v0.12.0`. Use it for topology, routing, readiness, Hub/Link/Portal, CLI, mTLS, durability, rollout, and failure-drill tasks. CLI flags, default ports, and time constants may change by version. Verify them first with the target binary's supported `vine version` and `vine <command> --help`; do not assume that `version` accepts `--json`. The liveness timings, ports, and drain durations here are `v0.12.0` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
@@ -100,7 +100,7 @@ Network-mode liveness facts in `v0.12.0`:
 | Console ping timeout | 2 seconds |
 | Unregistration threshold | 3 consecutive non-timeout failures |
 
-Invocation timeout only logs and does not increment health failures; a stuck App may still have its lease renewed by Link. These are implementation constants, not CLI tuning contracts.
+Invocation timeout only logs and does not increment health failures; a stuck App may still have its lease renewed by Link. These are `v0.12.0` implementation constants (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list), not CLI tuning contracts.
 
 Standalone disables TTL, heartbeat, sweeper, and App health checks. Linked retains Hub leases and heartbeats but skips App health checks because App and Link share a process.
 
@@ -125,7 +125,7 @@ Wrapper order:
 
 Operational shutdown order for separated mode: stop new external traffic → Apps → corresponding Links → Portal → Hub.
 
-Drain and stop timings in `v0.12.0` are implementation details: Link propagation grace is about 400 ms, in-flight Rpc/Event/Task drains for at most 30 seconds, App unregister RPC waits at most 1 minute, and App HTTP shutdown is about 10 seconds. Do not treat these values as stable CLI contracts. Orchestrator termination grace must cover the target version's actual boundaries.
+Drain and stop timings in `v0.12.0` are implementation details (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference)): Link propagation grace is about 400 ms, in-flight Rpc/Event/Task drains for at most 30 seconds, App unregister RPC waits at most 1 minute, and App HTTP shutdown is about 10 seconds. Do not treat these values as stable CLI contracts. Orchestrator termination grace must cover the target version's actual boundaries.
 
 ## CLI Baseline
 
@@ -133,7 +133,6 @@ Check first:
 
 ```bash
 vine version
-vine version --json
 vine --help
 vine hub --help
 vine link --help
@@ -145,7 +144,7 @@ Local `v0.12.0` example:
 ```bash
 vine dev \
   --db-sqlite-file ./hub-dev.sqlite \
-  --seed-yaml-file ./seed.yaml
+  --seed-yaml-file ./src/server/seed/hub.yaml
 
 vine hub serve \
   --mq-embedded-nats \
@@ -262,7 +261,7 @@ Back up the Hub database and restore it in an isolated environment. After restor
 
 ## Production Validation Checklist
 
-1. Pin Go, Vine, skelc, generated code, and the CLI image. Save `vine version --json`.
+1. Pin Go, Vine, skelc, generated code, and the CLI image. Save the raw `vine version` output.
 2. Diagram process and network paths for Hub, Portal, every Link/App, PostgreSQL, and Redis/NATS.
 3. In production-equivalent separated staging, start Hub → Portal/Links → Apps.
 4. Validate readiness through real Portal/Link paths, not just ports or processes.

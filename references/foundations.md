@@ -1,17 +1,19 @@
 # Vine Foundations, Versions, and Application Model
 
-This reference is distilled from the Vine `v0.12.0` source and the website's `next` documentation as of 2026-08-03. Confirm the target project's pinned version first. When versions differ, use the target revision's source, GoDoc, CHANGELOG, and CLI `--help`.
+This reference is distilled from the Vine `v0.12.0` source and the website's `next` documentation as of 2026-08-03. Confirm the target project's pinned version first. When versions differ, defer to the target revision's source, GoDoc, CHANGELOG, and CLI `--help`.
 
 ## Contents
 
 - [Version-first preflight](#version-first-preflight)
+- [Version baseline quick reference](#version-baseline-quick-reference)
 - [Runtime mental model](#runtime-mental-model)
 - [Contracts and generated code](#contracts-and-generated-code)
+- [Split business services by entity](#split-business-services-by-entity)
 - [Wire a minimal app after generation](#wire-a-minimal-app-after-generation)
 - [ApplicationSpec and runtime modes](#applicationspec-and-runtime-modes)
 - [Component, Module, and lifecycle](#component-module-and-lifecycle)
 - [Configuration lifecycle](#configuration-lifecycle)
-- [Recommended project structure](#recommended-project-structure)
+- [New-project standard structure](#new-project-standard-structure)
 - [Public package boundaries](#public-package-boundaries)
 - [Compatibility upgrade checklist](#compatibility-upgrade-checklist)
 
@@ -22,7 +24,7 @@ A build is determined jointly by Go, `go.yorun.ai/vine`, and skelc. Check these 
 ```bash
 go version
 go list -m -json go.yorun.ai/vine
-vine version --json
+vine version
 skelc version
 ```
 
@@ -42,9 +44,108 @@ For the `v0.12.0` and current `next` baseline:
 | Vine | `v0.12.0` source baseline |
 | Minimum skelc | `v0.9.0` |
 
-The minimum skelc version is only the runtime floor, not a recommendation to use the latest version. Future generators have no promised upper compatibility bound. For production, use an exact tag or commit that has been used to generate, review, and test the application.
+The minimum skelc version is only the runtime floor, not a recommendation to use the latest version. Future generators have no promised upper compatibility bound. For production, use an exact tag or commit that has already been used to generate, review, and test the application.
 
 Do not leave `@main` or `@latest` in production automation. Commit `go.mod`, `go.sum`, `.skel`, and generated code. Before 1.0, the website maintains only `next`, which may be ahead of the latest release.
+
+## Version Baseline Quick Reference
+
+This section is the **authoritative version-fact list for `v0.12.0` / the current `next`**.
+The numeric values scattered across the references should be cross-checked against this
+section. When upgrading to another version, first verify each item here against the target
+revision, then update the inline values kept in each reference (they remain next to the
+context that needs them, but all point to this section). Each item lists how to verify it:
+run the target binary's `vine version` and `vine <command> --help`, then consult the
+corresponding source / GoDoc / tests / CHANGELOG. Do not rely on memory.
+
+### Toolchain Versions
+
+| Item | v0.12.0 baseline | How to verify |
+| --- | --- | --- |
+| Go | `1.26.5` or later | `go version` |
+| Vine | `v0.12.0` source baseline | `go list -m -json go.yorun.ai/vine` |
+| Minimum skelc | `v0.9.0` | `vine version` (note its `MinSkelcVersion`) |
+| Measured baseline (this skill) | skelc `v0.11.1` / Vine `v0.12.0` / Go `1.26.5` | `skelc version` / `vine version` / `go version` |
+
+The minimum skelc version is only the runtime floor, not a recommendation to use the latest
+version. For production, use an exact tag or commit that has already been used to generate,
+review, and test the application.
+
+### Call Timeouts
+
+| Fact | v0.12.0 value | How to verify |
+| --- | --- | --- |
+| Default total timeout for ordinary Rpc / Web | 30 seconds | `capabilities.md` and `execution-and-boundaries.md` |
+| Portal rejects request timeouts above | 120 seconds | Portal source / `execution-and-boundaries.md` |
+| SSE / WebSocket traffic-idle timeout | 60 seconds (when no total timeout is set) | `execution-and-boundaries.md` |
+| Generated downstream client deadline inheritance | Inherits when it retains the injected context | `execution-and-boundaries.md` |
+
+### Event / Task Defaults and Limits
+
+| Behavior | Event Listener | Task Runner | How to verify |
+| --- | --- | --- | --- |
+| Per-attempt timeout | 30 seconds | 30 seconds | `capabilities.md` defaults table |
+| Concurrency per registration instance | 10 | 10 | Same |
+| Failure | Retry | Retry | Same |
+| Retry limit | Not limited by Vine | Not limited by Vine | Same |
+| `NoRetry` | Terminal acknowledgement, no failure record | Terminal acknowledgement, no failure record | Same |
+| DLQ | None | None | Same |
+| Stream storage | Memory | Memory | `runtime-operations.md` |
+
+### Redis Locks
+
+| Fact | v0.12.0 value | How to verify |
+| --- | --- | --- |
+| Default lock lease | 30 seconds with refresh | `data-and-testing.md` |
+
+### Network-Mode Liveness Facts
+
+| Behavior | v0.12.0 value | How to verify |
+| --- | --- | --- |
+| Link heartbeat | 10 seconds | `runtime-operations.md` |
+| Hub lease | 30 seconds | Same |
+| Hub sweep | 5 seconds | Same |
+| Separated Link App health interval | 5 seconds | Same |
+| Console ping timeout | 2 seconds | Same |
+| Unregistration threshold | 3 consecutive non-timeout failures | Same |
+
+### Drain / Stop Timings (implementation details, not a stable CLI contract)
+
+| Behavior | v0.12.0 value | How to verify |
+| --- | --- | --- |
+| Link propagation grace | About 400 ms | `runtime-operations.md` |
+| In-flight Rpc/Event/Task drain | At most 30 seconds | Same |
+| App unregister RPC | At most 1 minute | Same |
+| App HTTP shutdown | About 10 seconds | Same |
+
+### Listener Ports (v0.12.0 default/common values)
+
+| Boundary | Value | Caller |
+| --- | --- | --- |
+| Hub Control | `127.0.0.1:7071` | Link, Portal |
+| Hub Redis | `127.0.0.1:7072` | Link, Portal |
+| Hub Admin/Dashboard | `127.0.0.1:7075` | Control plane, Portal |
+| Link App API | `127.0.0.1:7079` | Same-host business App |
+| Link ingress | Dynamic (pin it in production) | Portal, remote Links, tools |
+| App HTTP | `127.0.0.1:0` | Link sidecar |
+| Portal Dashboard entry | `:7099` (default; do not reuse) | External control-plane clients |
+| Local browser project entry | `:7288` (WEBGW/RPCGW) | Browser |
+| Project-specific Dashboard example | `:7299` | Control plane |
+| Private Vite development upstream | `:5174` | Vite |
+
+Ports and addresses follow the target project's seed and startup configuration; the business
+entry port (e.g. example-greeting's `7188`) comes from the project's `portalRules` and is not
+a framework default.
+
+### Storage and Migration
+
+| Fact | v0.12.0 value | How to verify |
+| --- | --- | --- |
+| Event / Task stream | In-memory storage | `runtime-operations.md` |
+| Business table migration | Vine does not migrate automatically; explicit deployment step | `data-and-testing.md` |
+
+> When version facts are updated anywhere, treat this section as the baseline. If another
+> section conflicts with it, defer to this section and fix that section.
 
 ## Runtime Mental Model
 
@@ -67,15 +168,19 @@ Collaboration inside one App normally uses plain Go DI. Use Skel Rpc/vRPC for ev
 
 ## Contracts and Generated Code
 
-Pin the revision first, then initialize only an empty project, Go module, `skel/`, generated directory, and repeatable generation entry. These are generation prerequisites, not business implementation:
+Pin the revision first, then initialize only an empty project, Go module, the standard source skeleton, and a repeatable generation entry. These are generation prerequisites, not business implementation:
 
 ```bash
-mkdir vine-hello
-cd vine-hello
-go mod init example.com/vine-hello
+mkdir demo
+cd demo
+go mod init example.com/demo
 go get go.yorun.ai/vine@"$VINE_REVISION"
-mkdir skel skeled
+mkdir -p skel skeled/golang skeled/typescript
+mkdir -p src/server/app src/server/cmd/demo src/server/seed
+mkdir -p src/server/core src/server/impl src/server/repo
 ```
+
+A new project must use these server boundaries from the start and create `src/server/seed/hub.yaml`. By default create only `src/server/`; create `src/web/` only after the user confirms the browser frontend. Do not create root-level `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `web/`, or any `internal/`, and do not lay generated files flat under `skeled/`.
 
 Standard pipeline:
 
@@ -83,9 +188,9 @@ Standard pipeline:
 .skel source → skelc check → skelc gen → generated Go/TypeScript types/Schema/Server/Client → business implementation
 ```
 
-This is a contract and generated-boundary gate, not a mandatory ritual for ordinary implementation changes. When adding or modifying `.skel`, public wire shapes, capability registration, Vine/skelc versions, or generation commands, do not write Handlers, Servers, DTOs, routes, or client adapters that depend on the new boundary until `skelc check`, pinned-version generation, and generated-boundary review all succeed.
+This is a contract and generated-boundary gate, not a mandatory ritual for ordinary implementation changes. When adding or modifying `.skel`, a public wire shape, capability registration, Vine/skelc versions, or generation commands, do not write Handlers, Servers, DTOs, routes, or client adapters that depend on the new boundary until `skelc check`, pinned-version generation, and generated-boundary review all succeed.
 
-If a change only modifies business algorithms behind an existing contract, DAOs, logging, or internal lifecycle behavior, without touching the contract, capability registration, versions, or generation commands, leave `.skel` and generated directories unchanged and run the target build and behavior tests. If generated code is missing, stale, or inconsistent with the schema, stop immediately and re-enter the full generation gate.
+If a change only modifies business algorithms behind an existing contract, DAOs, logging, or internal lifecycle behavior, without touching the contract, capability registration, versions, or generation commands, you may keep `.skel` and generated directories unchanged and run the target build and behavior tests. If generated code is missing, stale, or inconsistent with the schema, stop immediately and re-enter the full generation gate.
 
 Never bypass Skel by hand-writing parallel interfaces or modifying generated files.
 
@@ -94,59 +199,121 @@ Minimal commands:
 ```bash
 skelc check --skel-in ./skel
 skelc symbol list --skel-in ./skel
-skelc gen go --skel-in ./skel --go-out ./skeled
+skelc gen go --skel-in ./skel --go-out ./skeled/golang
 ```
 
-The last command demonstrates only the Go target. When the repository maintains a browser client, its existing pinned generation entry must also produce the TypeScript target in the same gate. Do not guess TypeScript subcommands or flags from another skelc revision; use the repository script and the pinned tool's `--help`.
+The last command demonstrates only the Go target. When the project maintains generated TypeScript clients, its existing pinned generation entry must also produce the TypeScript target under `./skeled/typescript` in the same gate. Do not guess TypeScript subcommands or flags from another skelc revision; use the repository script and the pinned tool's `--help`.
 
 Prefer the repository's existing generation script, Make target, or `go generate` so that parameters, import rewriting, and formatting stay consistent. Regeneration overwrites generated directories:
 
 - Modify `.skel`, not generated Go or TypeScript.
-- When implementing a Server outside the generated package, embed the generated `Default...Server`; the generated interface may contain a private sealing method and cannot be implemented from scratch.
-- Go callers should use generated clients; browser callers should use generated TypeScript services/specs/types through the project vRPC client. Event and Task code should use generated emitters, launchers, Listeners, and Runners.
+- When implementing a Server outside the generated package, embed the generated `Default...Server`; the generated interface may contain a private seal method and cannot be implemented from scratch.
+- Callers use the generated client for their language. Event and Task code uses generated emitters, launchers, Listeners, and Runners.
 - After changing Vine or skelc, regenerate every maintained contract and language target and review the diff.
 
 Skel syntax and skelc commands belong to the Skel documentation. Do not guess language rules in the Vine skill.
 
-## Wire a Minimal App After Generation
+## Split Business Services by Entity
 
-Enter this section only after the previous Skel checks, generation, and generated-boundary review succeed. The following example shows only the App lifecycle shell after generation. Real capabilities must wire generated Rpc/Event/Task, or generated Web only when binary-stream semantics require it:
+An App is an assembly boundary for runtime, capability registration, and lifecycle. It is not a business Service. One App can host multiple business entities, aggregates, and named use cases; the contracts and hand-written implementations must be split along those boundaries, not collapsed into one umbrella Service named after the App. Using a CRM App as an example, the correct boundaries are at least:
+
+```text
+skel/
+├── customer_service.skel       # CustomerService
+├── deal_service.skel           # DealService
+├── activity_service.skel       # ActivityService
+└── dashboard_service.skel      # DashboardService, a read-only summary use case
+
+src/server/
+├── impl/
+│   ├── customer_service.go     # embeds DefaultCustomerServiceServer
+│   ├── deal_service.go         # embeds DefaultDealServiceServer
+│   ├── activity_service.go     # embeds DefaultActivityServiceServer
+│   └── dashboard_service.go    # embeds DefaultDashboardServiceServer
+├── core/
+│   ├── customer_service.go     # CustomerService and customer rules
+│   ├── deal_service.go         # DealService and deal rules
+│   ├── activity_service.go     # ActivityService and activity rules
+│   └── dashboard_service.go    # DashboardService and summary orchestration
+└── repo/
+    ├── customer_repository.go  # CustomerRepository implementation
+    ├── deal_repository.go      # DealRepository implementation
+    └── activity_repository.go  # ActivityRepository implementation
+```
+
+You must follow these rules:
+
+- One generated Rpc Service contains only the operations of one concrete entity/aggregate or one explicitly named use case. Do not generate `CRMService`, `OrderAppService`, or similar interfaces named after the App that swallow every entity's operations.
+- `src/server/impl/<entity>_service.go` adapts only the corresponding generated Server and `core.<Entity>Service`; it does not directly carry other entities' rules.
+- Keep the models, Services, and Repository interfaces in `src/server/core` independent per entity; keep the implementations in `src/server/repo` one-to-one with the interfaces. Multiple Repositories may share one RDB Component/connection, but that is not a reason to merge them into one Repository struct containing every query and write.
+- Use explicitly named orchestration Services for cross-entity write flows; use use-case names such as `DashboardService` or `ReportService` for summary queries. An orchestration boundary only coordinates the concrete entity Services/Repositories; it does not absorb their rules.
+- Files may be grouped into per-entity subdirectories depending on project size, but the full `skel` names, generated Servers, `impl`, `core`, and `repo` names must stay traceable to each other.
+
+Register multiple concrete Handlers of the same App through `ServicerInitHandlers`:
 
 ```go
-package main
+func (*CrmApp) ServicerInitHandlers(add vineapp.TypeAdder) {
+    add(vineapp.T[*impl.CustomerService]())
+    add(vineapp.T[*impl.DealService]())
+    add(vineapp.T[*impl.ActivityService]())
+    add(vineapp.T[*impl.DashboardService]())
+}
+```
+
+List the entities/aggregates, their owned operations, and cross-entity use cases before generating, then create the `.skel` Services accordingly. After generation, review the ServiceSpec, default Servers, and the App's registration count; if only one App-named Service was generated, the gate fails.
+
+## Wire a Minimal App After Generation
+
+Enter this section only after the previous section's Skel checks, generation, and generated-boundary review succeed. Put the App definition and dependency wiring in `src/server/app/app.go`:
+
+```go
+package app
 
 import (
-    "go.yorun.ai/vine/app"
-    "go.yorun.ai/vine/app/standalone"
+    vineapp "go.yorun.ai/vine/app"
     "go.yorun.ai/vine/core/logger"
 )
 
 type HelloModule struct {
-    app.BaseModule
+    vineapp.BaseModule
 }
 
 func (*HelloModule) AfterAppStart() {
     logger.Info("hello from Vine")
 }
 
-type HelloApp struct {
-    app.Application
+type Demo struct {
+    vineapp.Application
 }
 
-func (*HelloApp) Name() string {
-    return "demo.hello"
+func (*Demo) Name() string {
+    return "demo"
 }
 
-func (*HelloApp) InitModules(add app.TypeAdder) {
-    add(app.T[*HelloModule]())
+func (*Demo) InitModules(add vineapp.TypeAdder) {
+    add(vineapp.T[*HelloModule]())
 }
+```
+
+Keep `src/server/cmd/demo/main.go` limited to selecting the runtime mode and starting it:
+
+```go
+package main
+
+import (
+    serverapp "example.com/demo/src/server/app"
+    "go.yorun.ai/vine/app/standalone"
+)
 
 func main() {
-    standalone.NewWithOption[*HelloApp](standalone.Option{
-        SQLiteFile: "./vine.sqlite",
+    standalone.NewWithOption[*serverapp.Demo](standalone.Option{
+        SQLiteFile:   "./vine.sqlite",
+        SeedYAMLFile: "./src/server/seed/hub.yaml",
     }).StartAndWait()
 }
 ```
+
+Wire the generated Rpc/Web/Event/Task boundaries in `src/server/impl/`, keep business models, rules, and interfaces in `src/server/core/`, and put persistence implementations in `src/server/repo/`. Replace the example module path `example.com/demo` with the real module from the project's `go.mod`.
 
 `SQLiteFile` is the embedded Hub database, not the business RDB. `StartAndWait()` waits for SIGINT/SIGTERM and stops gracefully. App names must match `^[a-z]+(?:\.[a-z]+)*$`.
 
@@ -222,13 +389,26 @@ Responsibilities:
 | `BeforeAppStop` | Stop producers, cancel/join workers, and perform bounded flushes |
 | `AfterAppStop` | Release final resources owned by the application |
 
-A `BeforeAppStart` error becomes a panic, and startup has no transactional rollback. Hooks have no framework-provided automatic timeout. Declaration order determines hook order, but dependency resolution may construct objects earlier; express dependencies through real DI.
+A `BeforeAppStart` error becomes a panic, and there is no transactional rollback. Hooks have no framework-provided automatic timeout. Declaration order determines hook order, but dependency resolution may construct objects earlier; express dependencies through real DI.
 
 ## Configuration Lifecycle
 
 ```text
-Skel config → Hub DB/seed → Link snapshot → DI factory → typed Go pointer
+Skel config → Hub DB/seed → Link snapshot → DI → directly injected typed Go pointer
 ```
+
+Application code depends directly on the generated Config type and does not need another configuration model:
+
+```go
+type CRMDatabase struct {
+    rdb.Database
+    Config *skeled.CrmConfig `inject:""`
+}
+```
+
+Do not create a `core.Config` with identical fields, do not add a `core.NewConfig`, and do not write a `*skeled.CrmConfig -> *core.Config` conversion factory in `BindCommon`. The generated type already owns the schema, deserialization, registration, and DI boundary; wrapping it again only produces duplicated defaults, field drift, and a wrong lifecycle.
+
+When you really need a derived value, compute a local value from the generated Config at the point of use, or create a separate component that expresses real behavior. Do not copy the whole Config. Objects that need to observe `instant` updates must resolve the new generated Config directly in a new execution; they cannot freeze the first injected pointer through a singleton wrapper.
 
 | Lifecycle | Visible behavior | Suitable for |
 | --- | --- | --- |
@@ -241,25 +421,48 @@ Decoding is strict: the generated type must be registered, Hub/Link must contain
 
 Use `eternal` for long-lived invariants. Use `instant` only when each new execution can safely select the new value. Keep related fields backward compatible during rolling deployments.
 
-## Recommended Project Structure
+## New-Project Standard Structure
 
-Vine does not require a directory layout. A medium-sized project can use:
+Vine itself does not require a directory layout, but the Skill must use the following skeleton when it creates a project. `skel/` and `skeled/` live at the project root; the Hub seed and all hand-written code go under `src/server/`. The example below uses a multi-entity App with customers and deals to show Service granularity; replace the entity names in a real project while preserving the directory boundaries:
 
 ```text
 demo/
-├── cmd/demo/main.go             # Select the runtime mode and start only
-├── internal/application/        # App spec and Component/Module wiring
-├── internal/account/            # Business Module, services, capability Handlers
-├── internal/platform/           # RDB, Redis, and other Components
-├── skel/                        # Hand-maintained contracts
-├── skeled/                      # Generated code
-├── config/                      # Optional application configuration
-├── migrations/                  # Explicit database migrations
 ├── go.mod
-└── go.sum
+├── go.sum
+├── skel/                        # Hand-maintained contracts
+│   ├── domain.skel
+│   ├── customer_service.skel    # concrete entity Service
+│   └── deal_service.skel        # concrete entity Service
+├── skeled/                      # Contract-generated code
+│   ├── golang/                  # Generated Go types and clients
+│   └── typescript/              # Generated TypeScript types and clients
+└── src/
+    ├── server/
+    │   ├── seed/                # Server Hub configuration
+    │   │   └── hub.yaml         # Configuration imported into Hub
+    │   ├── app/                 # Vine App definition and dependency wiring
+    │   │   └── app.go           # App specification and assembly
+    │   ├── cmd/                 # Executable packages
+    │   │   └── demo/
+    │   │       └── main.go      # Process entry point
+    │   ├── core/                # Business models, Services, and repository interfaces split by entity
+    │   │   ├── customer_service.go
+    │   │   └── deal_service.go
+    │   ├── impl/                # Adapters that map one-to-one to generated capabilities
+    │   │   ├── customer_service.go
+    │   │   └── deal_service.go
+    │   └── repo/                # Persistence implementations split by entity
+    │       ├── customer_repository.go
+    │       └── deal_repository.go
+    └── web/                     # Browser package created after the user confirms the frontend
+        ├── src/
+        ├── package.json
+        └── tsconfig.json
 ```
 
-Organize source by business capability and keep tests in the same package as the Go files under test. Small projects can be simpler. Large projects should follow the team's existing Go conventions. This tree is guidance, not a framework contract.
+Keep only hand-maintained contracts under `skel/`; only the pinned generation entry may overwrite `skeled/golang/` and `skeled/typescript/`. `src/server/seed/hub.yaml` is the default project configuration entry; `src/server/app/` does only App specification and assembly, and `src/server/cmd/` does only process entry points. A default server project must create `src/server/` but must not create `src/web/` before user confirmation; at no stage create root-level `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `seed/`, `web/`, or `internal/`. Keep tests in the same package as the files under test. When an existing project does not use this layout, preserve its directories and generation commands unless the user explicitly asks for migration.
+
+A multi-entity project must not degenerate the example into one `<app>_service.skel`, one `impl.<App>Service`, one `core.Service`, or one `repo.Repository` covering every entity. Skel config generated types are injected directly by dependents; do not add mirrored Config files under `src/server/core/`.
 
 ## Public Package Boundaries
 
@@ -278,7 +481,7 @@ Use `internal/*` only to understand framework implementation and stack traces; i
 
 1. Change the pinned Go, Vine, and skelc values together on a reviewable branch.
 2. Review the target Vine module's Go requirement and every upgrade note.
-3. Run the target binary's `vine version --json` and record its minimum skelc.
+3. Run the target binary's supported `vine version`, record its output and minimum skelc, and do not assume that `version` accepts `--json`.
 4. Regenerate every contract with the selected skelc.
 5. Review generated diffs; do not patch generated directories by hand.
 6. Run application tests and static checks.

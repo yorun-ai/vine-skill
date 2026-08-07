@@ -9,7 +9,7 @@
 [![skelc](https://img.shields.io/badge/skelc-v0.11.1-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-这是一个具备版本意识的 Codex Skill，用于开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务及其浏览器前端。
+这是一个具备版本意识的 Codex Skill，用于开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务。新项目默认先交付服务端，只有明确确认后才追加前端。
 
 本仓库的参考基线为 Vine `v0.12.0`、skelc `v0.11.1` 和 Go `1.26.5` 或更高版本。目标项目自身固定的版本始终优先。
 
@@ -19,11 +19,42 @@
 - 契约、能力注册、生成器或版本发生变化时，必须运行固定版本的 `skelc check`、生成命令并审查生成 diff。
 - 纯实现变更必须保持生成边界不变。
 - 结构化同步 API 使用 Rpc/vRPC；Web/HTTP 只用于二进制流和静态资产。
-- 浏览器前端必须使用项目 vRPC client 与 skel 生成的 TypeScript service、spec 和类型。
-- 浏览器应用通过生成的 Web 能力与 Portal WEBGW 交付。
 - execution-scoped context、client、DAO、cache 和 locker 不得逃逸出所属 execution。
 - 根据 standalone、linked 或 separated 运行拓扑判断验证证据是否充分。
 - 仅要求诊断或评审时保持只读，只有请求授权实现时才修改代码。
+- 新项目默认按标准骨架先只交付服务端：契约在根级 `skel/`、生成物在 `skeled/`，Hub seed 与手写代码在 `src/server/`，确认前不创建 `src/web/`。
+- 服务端完成后询问是否需要前端，只有确认需要时才追加 `src/web/`。
+
+## 生成服务端项目结构
+
+Skill 新建项目时先统一使用以下纯服务端骨架，项目名和服务名替换为真实名称：
+
+```text
+demo/
+├── go.mod
+├── go.sum
+├── skel/
+│   ├── domain.skel
+│   └── greeting_service.skel
+├── skeled/
+│   ├── golang/
+│   └── typescript/
+└── src/
+    ├── server/
+    │   ├── seed/
+    │   │   └── hub.yaml
+    │   ├── app/
+    │   │   └── app.go
+    │   ├── cmd/
+    │   │   └── demo/
+    │   │       └── main.go
+    │   ├── core/
+    │   ├── impl/
+    │   └── repo/
+    └── web/          # 用户确认前端后才创建
+```
+
+默认服务端骨架包含 `src/server/`，且不创建根级 `app/`、`cmd/`、`core/`、`impl/`、`repo/`、`seed/`、`web/`，也不包含 `internal/`。现有项目除非明确要求迁移，否则保持既有布局。
 
 ## 仓库结构
 
@@ -43,7 +74,7 @@
 
 `SKILL.md` 保存核心工作流。详细且与版本相关的内容放在 `references/`，仅在任务相关时加载。
 
-`scripts/` 包含面向生成项目的 Linux Bash 与 Windows Command Prompt 原生启动模板，不要求 Python。
+`scripts/` 包含可选的 Linux Bash 与 Windows Command Prompt 原生启动模板，只有用户确认需要前端后才复制到项目中。
 
 ## 安装
 
@@ -54,17 +85,6 @@ git clone <repository-url> "${CODEX_HOME:-$HOME/.codex}/skills/vine-skill"
 ```
 
 安装后通过 `$vine-skill` 显式调用。
-
-## 启动生成的 Vine 浏览器应用
-
-本 Skill 包含不依赖额外运行时的原生启动模板：
-
-- Linux Bash 使用 [start_vine_app.sh](./scripts/start_vine_app.sh)；
-- Windows Command Prompt 使用 [start_vine_app.bat](./scripts/start_vine_app.bat)。
-
-Skill 创建带浏览器前端的项目时，会把两个启动器复制并适配到目标项目的 `scripts/` 目录。首次运行使用 `--install`，后续启动省略该参数，`--check` 只执行预检。
-
-默认本地 Standalone 拓扑通过 `http://127.0.0.1:7288/` 提供浏览器页面：`/api` 由 RPCGW 处理，`/` 由 WEBGW 处理。Vite 作为私有上游保留在 `:5174`，Dashboard 使用独立的项目专属 `:7299` origin。
 
 ## 版本安全
 

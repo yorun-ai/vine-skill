@@ -1,0 +1,35 @@
+domain greeting
+
+@desc("A greeting message persisted in sqlite")
+pub data Greeting {
+    id: uuid
+    message: string
+    createdAt: timestamp
+}
+
+@desc("Paged list of greetings")
+pub data GreetingPage {
+    items: list<Greeting>
+    nextToken: string?
+}
+
+@desc("Greeting service")
+pub service GreetingService {
+    for GreetingActor via client
+    noauth
+    @desc("Create a greeting")
+    method createGreeting {
+        input {
+            message: string
+        }
+        output Greeting
+    }
+    @desc("List greetings")
+    method listGreetings {
+        input {
+            pageToken: string?
+            pageSize: int?
+        }
+        output GreetingPage
+    }
+}

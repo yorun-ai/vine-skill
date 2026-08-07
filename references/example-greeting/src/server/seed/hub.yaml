@@ -1,0 +1,25 @@
+appConfigs:
+  - name: greeting.GreetingConfig
+    value: '{"defaultPageSize":20}'
+    override: true
+portalSites:
+  - name: greeting-rpc
+    override: true
+    type: RPCGW
+    actorSkelName: greeting.GreetingActor
+    actorVia: client
+    cors:
+      mode: STRICT
+      allowedOrigins:
+        - http://127.0.0.1:7188
+        - http://localhost:7188
+portalRules:
+  - name: greeting-api
+    override: true
+    scheme: http
+    host: ""
+    port: 7188
+    pathPrefix: /api
+    targetType: SITE
+    siteName: greeting-rpc
+    redirectionPattern: ""

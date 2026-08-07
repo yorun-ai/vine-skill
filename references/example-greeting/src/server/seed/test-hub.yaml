@@ -1,0 +1,7 @@
+# Test-only seed: appConfigs only, without portalSites or portalRules.
+# This keeps testkit.StartStandalone from binding real Portal listeners
+# and makes tests independent of local port availability and stale processes.
+appConfigs:
+  - name: greeting.GreetingConfig
+    value: '{"defaultPageSize":20}'
+    override: true

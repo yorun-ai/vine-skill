@@ -1,0 +1,15 @@
+domain greeting
+
+@desc("Greeting caller actor")
+pub actor GreetingActor {
+    via client {}
+    auth {
+        @sensitive
+        credential {
+            token: string
+        }
+        info {
+            username: string
+        }
+    }
+}
