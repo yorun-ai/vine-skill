@@ -10,7 +10,6 @@ from urllib.parse import unquote, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PAIRED_ZH_ROOT = ROOT.parents[1] / "vine-skill"
 REQUIRED_FILES = (
     "SKILL.md",
     "README.md",
@@ -252,28 +251,40 @@ def uncommented_yaml(path: Path) -> str:
     return "\n".join(lines)
 
 
+def find_paired_chinese_root(root: Path = ROOT) -> Path | None:
+    """Return the Chinese tree only for the expected local bilingual layout."""
+    if root.parent.name != "english":
+        return None
+
+    candidate = root.parent.parent / "vine-skill"
+    if not (candidate / "SKILL.md").is_file():
+        return None
+    return candidate
+
+
 def validate_paired_chinese_tree() -> None:
-    if not PAIRED_ZH_ROOT.is_dir():
+    paired_zh_root = find_paired_chinese_root()
+    if paired_zh_root is None:
         return
 
-    validate_skill_frontmatter(PAIRED_ZH_ROOT)
-    validate_agent_metadata(PAIRED_ZH_ROOT)
-    validate_local_markdown_links(PAIRED_ZH_ROOT)
-    validate_no_stale_markdown(PAIRED_ZH_ROOT)
+    validate_skill_frontmatter(paired_zh_root)
+    validate_agent_metadata(paired_zh_root)
+    validate_local_markdown_links(paired_zh_root)
+    validate_no_stale_markdown(paired_zh_root)
 
     for relative in MIRRORED_MARKDOWN:
         english_file = ROOT / relative
-        chinese_file = PAIRED_ZH_ROOT / relative
+        chinese_file = paired_zh_root / relative
         if not chinese_file.is_file():
             fail(f"paired Chinese tree is missing: {relative}")
         validate_markdown_shape(english_file, chinese_file, relative)
 
     for relative in EXACT_MIRROR_FILES:
-        if (ROOT / relative).read_bytes() != (PAIRED_ZH_ROOT / relative).read_bytes():
+        if (ROOT / relative).read_bytes() != (paired_zh_root / relative).read_bytes():
             fail(f"paired executable artifact differs: {relative}")
 
     english_example = ROOT / "references/example-greeting"
-    chinese_example = PAIRED_ZH_ROOT / "references/example-greeting"
+    chinese_example = paired_zh_root / "references/example-greeting"
     for english_file in sorted(english_example.rglob("*")):
         if not english_file.is_file() or english_file.name == "README.md":
             continue
