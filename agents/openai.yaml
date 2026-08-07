@@ -1,4 +1,4 @@
 interface:
   display_name: "Vine Application Development"
-  short_description: "Build Vine services and Portal-delivered vRPC frontends"
-  default_prompt: "Use $vine-skill to identify pinned versions and affected Skel boundaries, then build or diagnose the Vine service or generated-TypeScript vRPC frontend; for browser-enabled local Standalone delivery, wire generated Web + WEBGW and RPCGW so the page is usable at port 7288, include native Linux .sh and Windows .bat launchers, and provide actual validation evidence."
+  short_description: "Build and validate the Vine server first; add the frontend only after confirmation"
+  default_prompt: "Use $vine-skill to build and validate the Vine server first with the standard skeleton (contracts in root skel/, generated artifacts in skeled/, Hub seed and hand-written code in src/server/); if the request did not include a frontend, ask after the server is complete and create the src/web/ browser frontend only after confirmation."

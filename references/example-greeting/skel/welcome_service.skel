@@ -1,0 +1,16 @@
+domain greeting
+
+@desc("Welcome data for the authenticated user")
+pub data Welcome {
+    username: string
+    message: string
+}
+
+@desc("Welcome service; requires an authenticated actor (session)")
+pub service WelcomeService {
+    for GreetingActor via client
+    @desc("Get welcome info; the actor is validated before this runs")
+    method getWelcome {
+        output Welcome
+    }
+}

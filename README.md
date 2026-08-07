@@ -9,7 +9,7 @@
 [![skelc](https://img.shields.io/badge/skelc-v0.11.1-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-A version-aware Codex skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services and browser frontends.
+A version-aware Codex skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services. New projects are delivered server-first; a frontend is added only after explicit confirmation.
 
 The reference baseline is Vine `v0.12.0`, skelc `v0.11.1`, and Go `1.26.5` or later. A target project's pinned versions always take precedence.
 
@@ -19,11 +19,42 @@ The reference baseline is Vine `v0.12.0`, skelc `v0.11.1`, and Go `1.26.5` or la
 - Require pinned `skelc check`, generation, and generated-diff review for contract, capability-registration, generator, or version changes.
 - Preserve generated boundaries for implementation-only changes.
 - Use Rpc/vRPC for structured synchronous APIs and reserve Web/HTTP for binary streams and static assets.
-- Require browser frontends to use the project's vRPC client and skel-generated TypeScript services, specs, and types.
-- Deliver browser applications through a generated Web capability and Portal WEBGW.
 - Keep execution-scoped contexts, clients, DAOs, caches, and lockers inside their owning execution.
 - Match validation evidence to standalone, linked, or separated runtime topology.
 - Diagnose read-only unless the request authorizes implementation.
+- Create new projects server-first with the standard skeleton: contracts in root `skel/`, generated artifacts in `skeled/`, and Hub seed plus hand-written code under `src/server/`, with no `src/web/` until confirmed.
+- After the server is complete, ask whether a frontend is needed and create `src/web/` only after confirmation.
+
+## Generated server project layout
+
+New projects created by the Skill initially use this server-only skeleton. Project and service names are replaced with the real names:
+
+```text
+demo/
+├── go.mod
+├── go.sum
+├── skel/
+│   ├── domain.skel
+│   └── greeting_service.skel
+├── skeled/
+│   ├── golang/
+│   └── typescript/
+└── src/
+    ├── server/
+    │   ├── seed/
+    │   │   └── hub.yaml
+    │   ├── app/
+    │   │   └── app.go
+    │   ├── cmd/
+    │   │   └── demo/
+    │   │       └── main.go
+    │   ├── core/
+    │   ├── impl/
+    │   └── repo/
+    └── web/          # created only after the user confirms the frontend
+```
+
+The default server skeleton includes `src/server/` and never creates root-level `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `seed/`, or `web/`, and contains no `internal/`. Existing projects retain their established layout unless migration is explicitly requested.
 
 ## Repository layout
 
@@ -43,7 +74,7 @@ The reference baseline is Vine `v0.12.0`, skelc `v0.11.1`, and Go `1.26.5` or la
 
 `SKILL.md` contains the core workflow. Detailed and version-sensitive guidance lives under `references/` and is loaded only when relevant.
 
-The files under `scripts/` are dependency-free Linux Bash and Windows Command Prompt launcher templates for generated browser-enabled Vine applications.
+The files under `scripts/` are optional Linux Bash and Windows Command Prompt launcher templates copied only after the user confirms a frontend.
 
 ## Install
 
@@ -54,17 +85,6 @@ git clone <repository-url> "${CODEX_HOME:-$HOME/.codex}/skills/vine-skill"
 ```
 
 Invoke the installed skill explicitly as `$vine-skill`.
-
-## Start a generated Vine browser app
-
-The Skill includes dependency-free native launcher templates:
-
-- [start_vine_app.sh](./scripts/start_vine_app.sh) for Linux Bash;
-- [start_vine_app.bat](./scripts/start_vine_app.bat) for Windows Command Prompt.
-
-When the Skill creates a browser-enabled project, it copies and adapts both launchers into that project's `scripts/` directory. On the first run use `--install`; later runs omit it, and `--check` performs preflight only.
-
-The default local Standalone topology exposes the browser page at `http://127.0.0.1:7288/`: `/api` is handled by RPCGW and `/` by WEBGW. Vite remains a private upstream on `:5174`, while Dashboard uses the separate project-specific origin on `:7299`.
 
 ## Version safety
 

@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${VINE_PROJECT_ROOT:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
-WEB_DIR="${VINE_WEB_DIR:-$PROJECT_ROOT/web}"
-SERVER_PACKAGE="${VINE_SERVER_PACKAGE:-./cmd/server}"
+WEB_DIR="${VINE_WEB_DIR:-$PROJECT_ROOT/src/web}"
+SERVER_PACKAGE="${VINE_SERVER_PACKAGE:-./src/server/cmd/demo}"
 PREPARE_PACKAGE="${VINE_PREPARE_PACKAGE:-}"
 HOST="${VINE_HOST:-127.0.0.1}"
 VITE_PORT="${VINE_VITE_PORT:-5174}"
@@ -40,7 +40,7 @@ Optional environment overrides:
   VINE_PREPARE_PACKAGE, VINE_HOST, VINE_VITE_PORT,
   VINE_PUBLIC_PORT, VINE_DASHBOARD_PORT, VINE_STARTUP_TIMEOUT
 
-Set VINE_PREPARE_PACKAGE=./cmd/migrate only when the target project explicitly
+Set VINE_PREPARE_PACKAGE=./src/server/cmd/migrate only when the target project explicitly
 requires that preparation step. The script never infers or runs migrations.
 EOF
 }
@@ -229,7 +229,21 @@ is_positive_integer "$STARTUP_TIMEOUT" || fail "VINE_STARTUP_TIMEOUT must be a p
 [[ "$PUBLIC_PORT" != "$DASHBOARD_PORT" ]] || fail "Portal and Dashboard ports must be distinct"
 
 [[ -f "$PROJECT_ROOT/go.mod" ]] || fail "go.mod is missing from project root: $PROJECT_ROOT"
+[[ -d "$PROJECT_ROOT/skel" ]] || fail "hand-maintained contract directory is missing: $PROJECT_ROOT/skel"
+[[ -f "$PROJECT_ROOT/src/server/seed/hub.yaml" ]] || fail "Hub seed configuration is missing: $PROJECT_ROOT/src/server/seed/hub.yaml"
+[[ -d "$PROJECT_ROOT/skeled/golang" ]] || fail "generated Go directory is missing: $PROJECT_ROOT/skeled/golang"
+[[ -d "$PROJECT_ROOT/skeled/typescript" ]] || fail "generated TypeScript directory is missing: $PROJECT_ROOT/skeled/typescript"
+[[ -f "$PROJECT_ROOT/src/server/app/app.go" ]] || fail "Vine App definition is missing: $PROJECT_ROOT/src/server/app/app.go"
+[[ -d "$PROJECT_ROOT/src/server/core" ]] || fail "business core directory is missing: $PROJECT_ROOT/src/server/core"
+[[ -d "$PROJECT_ROOT/src/server/impl" ]] || fail "capability adapter directory is missing: $PROJECT_ROOT/src/server/impl"
+[[ -d "$PROJECT_ROOT/src/server/repo" ]] || fail "persistence directory is missing: $PROJECT_ROOT/src/server/repo"
+if [[ "$SERVER_PACKAGE" == ./* ]]; then
+    SERVER_DIR="$PROJECT_ROOT/${SERVER_PACKAGE#./}"
+    [[ -f "$SERVER_DIR/main.go" ]] || fail "Vine process entry is missing: $SERVER_DIR/main.go"
+fi
+[[ -d "$WEB_DIR/src" ]] || fail "frontend source directory is missing: $WEB_DIR/src"
 [[ -f "$WEB_DIR/package.json" ]] || fail "frontend package.json is missing: $WEB_DIR/package.json"
+[[ -f "$WEB_DIR/tsconfig.json" ]] || fail "frontend tsconfig.json is missing: $WEB_DIR/tsconfig.json"
 command_exists go || fail "required command is unavailable on PATH: go"
 command_exists pnpm || fail "required command is unavailable on PATH: pnpm"
 
@@ -267,9 +281,22 @@ printf '[vine-start] vRPC: http://%s:%s/api/invoke\n' "$HOST" "$PUBLIC_PORT"
 printf '[vine-start] Dashboard: http://%s:%s/\n' "$HOST" "$DASHBOARD_PORT"
 printf '[vine-start] press Ctrl+C to stop both processes\n'
 
+# Wait for either child to exit, then stop the other. Uses polling instead of
+# `wait -n` so this works on macOS /bin/bash 3.2 as well as newer bash.
 set +e
-wait -n "$FRONTEND_PID" "$BACKEND_PID"
-STATUS=$?
+STATUS=""
+while :; do
+    if ! kill -0 "$FRONTEND_PID" >/dev/null 2>&1; then
+        wait "$FRONTEND_PID"
+        STATUS=$?
+        break
+    fi
+    if ! kill -0 "$BACKEND_PID" >/dev/null 2>&1; then
+        wait "$BACKEND_PID"
+        STATUS=$?
+        break
+    fi
+    sleep 0.5
+done
 set -e
-fail "a child process exited with status $STATUS; stopping the other process"
-
+fail "a child process exited with status ${STATUS:-unknown}; stopping the other process"

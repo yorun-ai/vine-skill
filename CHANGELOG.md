@@ -6,6 +6,34 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-07
+
+### Added
+
+- Added a verified `example-greeting` server template with sqlite persistence, generated
+  configuration, actor authentication, session-token tests, and testkit coverage
+- Added generated-example build/test/vet CI plus Linux and Windows launcher preflight jobs
+- Added local English/Chinese Skill-tree structure, link, launcher, and example consistency
+  validation
+
+### Changed
+
+- Standardized new server projects on root `skel/`, `skeled/{golang,typescript}/`,
+  and Hub seed plus hand-written server code under `src/server/`
+- Deferred frontend creation until after server completion and explicit user confirmation;
+  confirmed frontends are added under `src/web/`
+- Updated native launcher defaults and preflight checks for the server-first layout
+- Replaced the unsupported JSON version probe with the target CLI's supported `vine version`
+  output
+- Aligned the server example with the same-project `src/web/` policy and made real
+  Portal/RPCGW verification mandatory before runnable-delivery claims
+
+### Fixed
+
+- Removed stale root-level `web/`, `cmd/`, and `seed/` assertions from package validation
+- Corrected the example's authentication evidence so unit tests cover token validation,
+  testkit covers post-admission actor behavior, and Portal admission requires real E2E proof
+
 ## [0.1.0] - 2026-08-05
 
 ### Added

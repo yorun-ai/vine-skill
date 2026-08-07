@@ -1,0 +1,2 @@
+@desc("Greeting contracts")
+domain greeting

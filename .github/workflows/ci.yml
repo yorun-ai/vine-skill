@@ -17,5 +17,117 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.26.5
+          cache: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install pnpm
+        run: npm install --global pnpm@10.15.0
+
+      - name: Install pinned skelc
+        run: go install go.yorun.ai/skelc/cmd/skelc@v0.11.1
+
       - name: Validate skill package
-        run: python3 scripts/validate_skill.py
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          python3 scripts/validate_skill.py
+
+      - name: Validate launcher syntax and Go formatting
+        run: |
+          bash -n scripts/start_vine_app.sh
+          test -z "$(gofmt -l references/example-greeting/src/server)"
+
+      - name: Run Linux launcher preflight
+        run: |
+          fixture="$RUNNER_TEMP/vine-launcher-fixture"
+          mkdir -p \
+            "$fixture/skel" \
+            "$fixture/skeled/golang" \
+            "$fixture/skeled/typescript" \
+            "$fixture/src/server/seed" \
+            "$fixture/src/server/app" \
+            "$fixture/src/server/cmd/demo" \
+            "$fixture/src/server/core" \
+            "$fixture/src/server/impl" \
+            "$fixture/src/server/repo" \
+            "$fixture/src/web/src" \
+            "$fixture/src/web/node_modules"
+          printf 'module example.com/demo\n\ngo 1.26.5\n' > "$fixture/go.mod"
+          printf 'appConfigs: []\n' > "$fixture/src/server/seed/hub.yaml"
+          printf 'package app\n' > "$fixture/src/server/app/app.go"
+          printf 'package main\n\nfunc main() {}\n' > "$fixture/src/server/cmd/demo/main.go"
+          printf '{}\n' > "$fixture/src/web/package.json"
+          printf '{}\n' > "$fixture/src/web/tsconfig.json"
+          VINE_PROJECT_ROOT="$fixture" bash scripts/start_vine_app.sh --check
+
+      - name: Generate and test the server example
+        working-directory: references/example-greeting
+        run: |
+          skelc check --skel-in ./skel
+          skelc gen go --skel-in ./skel --go-out ./skeled/golang --go-vine-version v0.12.0
+          go mod init example.com/greeting
+          go get go.yorun.ai/vine@v0.12.0 github.com/google/uuid@v1.6.0
+          go mod tidy
+          go build ./...
+          go test ./...
+          go vet ./...
+
+  windows-launcher:
+    name: CI / Windows Launcher
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.26.5
+          cache: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install pnpm
+        run: npm install --global pnpm@10.15.0
+
+      - name: Create launcher preflight fixture
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP "vine-launcher-fixture"
+          $directories = @(
+            "skel",
+            "skeled/golang",
+            "skeled/typescript",
+            "src/server/seed",
+            "src/server/app",
+            "src/server/cmd/demo",
+            "src/server/core",
+            "src/server/impl",
+            "src/server/repo",
+            "src/web/src",
+            "src/web/node_modules"
+          )
+          foreach ($directory in $directories) {
+            New-Item -ItemType Directory -Force -Path (Join-Path $fixture $directory) | Out-Null
+          }
+          Set-Content -Path (Join-Path $fixture "go.mod") -Value "module example.com/demo`n`ngo 1.26.5"
+          Set-Content -Path (Join-Path $fixture "src/server/seed/hub.yaml") -Value "appConfigs: []"
+          Set-Content -Path (Join-Path $fixture "src/server/app/app.go") -Value "package app"
+          Set-Content -Path (Join-Path $fixture "src/server/cmd/demo/main.go") -Value "package main`n`nfunc main() {}"
+          Set-Content -Path (Join-Path $fixture "src/web/package.json") -Value "{}"
+          Set-Content -Path (Join-Path $fixture "src/web/tsconfig.json") -Value "{}"
+          "VINE_PROJECT_ROOT=$fixture" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Run Windows launcher preflight
+        shell: cmd
+        run: scripts\start_vine_app.bat --check

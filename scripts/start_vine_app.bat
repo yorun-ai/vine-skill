@@ -5,8 +5,8 @@ set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%..") do set "DEFAULT_PROJECT_ROOT=%%~fI"
 
 if not defined VINE_PROJECT_ROOT set "VINE_PROJECT_ROOT=%DEFAULT_PROJECT_ROOT%"
-if not defined VINE_WEB_DIR set "VINE_WEB_DIR=%VINE_PROJECT_ROOT%\web"
-if not defined VINE_SERVER_PACKAGE set "VINE_SERVER_PACKAGE=./cmd/server"
+if not defined VINE_WEB_DIR set "VINE_WEB_DIR=%VINE_PROJECT_ROOT%\src\web"
+if not defined VINE_SERVER_PACKAGE set "VINE_SERVER_PACKAGE=./src/server/cmd/demo"
 if not defined VINE_PREPARE_PACKAGE set "VINE_PREPARE_PACKAGE="
 if not defined VINE_HOST set "VINE_HOST=127.0.0.1"
 if not defined VINE_VITE_PORT set "VINE_VITE_PORT=5174"
@@ -47,8 +47,64 @@ if not exist "%VINE_PROJECT_ROOT%\go.mod" (
     set "EXIT_CODE=1"
     goto cleanup
 )
+if not exist "%VINE_PROJECT_ROOT%\skel\" (
+    echo [vine-start] error: hand-maintained contract directory is missing: %VINE_PROJECT_ROOT%\skel 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\src\server\seed\hub.yaml" (
+    echo [vine-start] error: Hub seed configuration is missing: %VINE_PROJECT_ROOT%\src\server\seed\hub.yaml 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\skeled\golang\" (
+    echo [vine-start] error: generated Go directory is missing: %VINE_PROJECT_ROOT%\skeled\golang 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\skeled\typescript\" (
+    echo [vine-start] error: generated TypeScript directory is missing: %VINE_PROJECT_ROOT%\skeled\typescript 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\src\server\app\app.go" (
+    echo [vine-start] error: Vine App definition is missing: %VINE_PROJECT_ROOT%\src\server\app\app.go 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\src\server\core\" (
+    echo [vine-start] error: business core directory is missing: %VINE_PROJECT_ROOT%\src\server\core 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\src\server\impl\" (
+    echo [vine-start] error: capability adapter directory is missing: %VINE_PROJECT_ROOT%\src\server\impl 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\src\server\repo\" (
+    echo [vine-start] error: persistence directory is missing: %VINE_PROJECT_ROOT%\src\server\repo 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+set "VINE_SERVER_PATH=%VINE_SERVER_PACKAGE:/=\%"
+if not exist "%VINE_PROJECT_ROOT%\%VINE_SERVER_PATH%\main.go" (
+    echo [vine-start] error: Vine process entry is missing: %VINE_PROJECT_ROOT%\%VINE_SERVER_PATH%\main.go 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_WEB_DIR%\src\" (
+    echo [vine-start] error: frontend source directory is missing: %VINE_WEB_DIR%\src 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
 if not exist "%VINE_WEB_DIR%\package.json" (
     echo [vine-start] error: frontend package.json is missing: %VINE_WEB_DIR%\package.json 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_WEB_DIR%\tsconfig.json" (
+    echo [vine-start] error: frontend tsconfig.json is missing: %VINE_WEB_DIR%\tsconfig.json 1>&2
     set "EXIT_CODE=1"
     goto cleanup
 )
@@ -273,5 +329,5 @@ echo   VINE_PROJECT_ROOT, VINE_WEB_DIR, VINE_SERVER_PACKAGE,
 echo   VINE_PREPARE_PACKAGE, VINE_HOST, VINE_VITE_PORT,
 echo   VINE_PUBLIC_PORT, VINE_DASHBOARD_PORT, VINE_STARTUP_TIMEOUT
 echo.
-echo Set VINE_PREPARE_PACKAGE=./cmd/migrate only when explicitly required.
+echo Set VINE_PREPARE_PACKAGE=./src/server/cmd/migrate only when explicitly required.
 goto cleanup

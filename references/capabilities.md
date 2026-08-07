@@ -1,6 +1,6 @@
 # Vine Rpc, Web, Event, and Task
 
-This reference is based on Vine `v0.12.0`. Use it when designing or implementing typed capabilities and vRPC HTTP boundaries. Read the version and generated-code rules in [foundations.md](foundations.md) first.
+This reference is based on Vine `v0.12.0`. Use it when designing or implementing typed capabilities and vRPC HTTP boundaries. Read the version and generated-code rules in [foundations.md](foundations.md) first. The timeout, concurrency, and other values here are `v0.12.0` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
@@ -27,7 +27,7 @@ Ask first: Does this boundary need independent deployment? Does the caller wait 
 
 Shared workflow:
 
-1. Declare types, identity, and capabilities completely in `.skel`.
+1. Split Services by business entity, aggregate, or named use case first, then declare types, identity, and capabilities completely in an independent `.skel` file. The App name cannot replace a business boundary name.
 2. Run `check` and every maintained Go/TypeScript `gen` target with the pinned skelc, then review the generated boundary.
 3. Only after generation succeeds, embed `Default...` and write the concrete implementation outside the generated package.
 4. Embed the corresponding `...Enabled` in the App and register the handler, listener, or runner.
@@ -35,6 +35,8 @@ Shared workflow:
 6. Validate behavior with testkit and validate network/runtime semantics in the target topology.
 
 ## Rpc
+
+An App can register multiple Rpc Services. A multi-entity App must use concrete boundary names, such as `CustomerService`, `DealService`, `ActivityService`, and `DashboardService` in a CRM App. Do not create one `CRMService` that merges every method. The corresponding `src/server/impl` Handlers, `src/server/core` Services, and `src/server/repo` Repositories are also split by the same entity or use case.
 
 Standard implementation:
 
@@ -67,6 +69,8 @@ type Probe struct {
 
 Rules:
 
+- An App is an assembly and runtime boundary, not a default Rpc Service. `ServicerInitHandlers` should register every concrete entity/use-case Handler.
+- Each generated Service, default Server, `src/server/impl` Handler, `src/server/core` Service, and `src/server/repo` Repository must keep traceable names and responsibilities. Sharing a database connection is not a reason to merge Services or Repositories.
 - Generated code owns `ServiceSpec`, `MethodSpec`, schemas, and registration. Ordinary business code should not recreate low-level specs by hand.
 - Server implementations outside the generated package must embed the generated default Server to satisfy the sealed interface.
 - A client resolved inside an execution inherits the current trace, Actor, Initiator, and deadline. A client injected into a Module uses the App root context.
@@ -139,7 +143,7 @@ Defaults and limits in `v0.12.0`:
 | DLQ | None | None |
 | Stream storage | Memory | Memory |
 
-These are version-specific facts. Check the corresponding documentation and source when the target version differs.
+These are `v0.12.0` version facts (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list). Check the corresponding documentation and source when the target version differs.
 
 ### At-Least-Once Delivery and Cancellation
 
