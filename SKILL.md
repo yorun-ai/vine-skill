@@ -19,7 +19,7 @@ Always follow these principles:
 8. **Act only as authorized by the request**: Stay read-only for review or diagnosis. Modify code and run the corresponding validation only when implementation is explicitly requested.
 9. **Build the server first**: For a new project, implement and validate `src/server/` first. Do not pre-create `src/web/` or add Vite, frontend dependencies, or frontend startup configuration. If the original request did not mention a frontend, ask the user whether one is needed after the server is complete and wait for the answer.
 10. **Add the frontend only after confirmation**: Only when the user already requested or explicitly confirmed a frontend, create the browser package in `src/web/` and connect it to the existing server through the generated TypeScript vRPC client and Portal WEBGW. Do not move `src/server/`. Copy and adapt the native startup scripts only at this stage.
-11. **Use the fixed project skeleton**: For new projects, put hand-maintained contracts in root `skel/`, generated artifacts in root `skeled/golang/` and `skeled/typescript/`, the Hub seed fixed in `src/server/seed/hub.yaml`, hand-written server code under `src/server/` (`app/`, `cmd/<name>/`, `core/`, `impl/`, `repo/`), and the browser package in `src/web/`. The default skeleton must include `src/server/` and no root-level `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `seed/`, `web/`, or `internal/`. Preserve an existing layout unless a migration is requested.
+11. **Use the fixed project skeleton**: For new projects, put hand-maintained contracts in root `skel/`, generated artifacts in root `skeled/golang/` and `skeled/typescript/`, the Hub seed fixed in `src/server/seed/hub.yaml`, hand-written server code under `src/server/` (`app/`, `cmd/<name>/`, `core/`, `impl/`, `repo/`), and the browser package in `src/web/`. Make `skeled/golang/` an independent generated-code module and import it from `src/server/go.mod` with `require` plus a local `replace`. The default skeleton must include `src/server/` and no root-level `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `seed/`, `web/`, or `internal/`. Preserve an existing layout unless a migration is requested.
 12. **Split Services by entity**: An App is a runtime and assembly boundary, not a business Service. When one App contains multiple entities or aggregates, split them by concrete entity or named use case across `skel/`, `src/server/impl/`, `src/server/core/`, and `src/server/repo/` (e.g. `CustomerService`, `DealService`, `ActivityService`, `DashboardService`). Do not create a single App-named umbrella Service that stuffs every entity's CRUD, rules, and persistence into one struct.
 13. **Inject the generated Config directly**: The `*skeled.<Name>Config` generated from Skel config is the configuration type used by application code. Components, Modules, Services, and Handlers should inject it directly with `inject:""`. Do not copy fields into a `core.Config`, and do not use `NewConfig` or a `BindCommon` factory to wrap the generated Config meaninglessly.
 14. **Frontend delivery must state the startup method**: Whenever `src/web/` is created or modified, the final reply must explicitly give the required versions, the first startup command for Linux/macOS, subsequent startup commands, the Windows command, the preflight-only command, the business page/vRPC/Dashboard addresses, and how to handle occupied ports or missing dependencies. Saying the code is done is not enough, and referencing the README is not enough.
@@ -95,7 +95,7 @@ Run only commands already available locally. Do not install or upgrade tools mer
 6. Report the version and topology baseline. Do not treat the website's current examples as the project's API automatically.
 7. When using the Standalone Dashboard, check whether another process owns the target host/port, and explicitly set a project-specific `DashboardURL`. Do not rely on the default `:7099`, and do not reuse a browser origin that has served another Vine revision.
 
-See [foundations.md](references/foundations.md) for detailed baseline checks; the `v0.12.0` default timeouts, ports, and liveness timings are collected in [Version baseline quick reference](references/foundations.md#version-baseline-quick-reference).
+See [foundations.md](references/foundations.md) for detailed baseline checks; the `v0.13.1` default timeouts, ports, and liveness timings are collected in [Version baseline quick reference](references/foundations.md#version-baseline-quick-reference).
 
 ## Load References by Problem
 
@@ -124,12 +124,13 @@ Mark only the nodes that are actually affected. Do not mechanically run every va
 
 ## Implement Changes
 
-The following implementation rules come from the Vine `v0.12.0` source and the website's `next` documentation as researched on 2026-08-03. When the target project uses a different version, first verify construction timing, hook/panic behavior, configuration, retries, locks, and transport behavior at the pinned revision. When they differ, defer to the target revision's public source, GoDoc, tests, and release notes.
+The following implementation rules come from the Vine `v0.13.1` source and the website's `next` documentation as researched on 2026-08-18. When the target project uses a different version, first verify construction timing, hook/panic behavior, configuration, retries, locks, and transport behavior at the pinned revision. When they differ, defer to the target revision's public source, GoDoc, tests, and release notes.
 
 ### Use Generated Boundaries
 
 - For tasks covered by the generation gate, complete the checks, generation, and diff review above before writing implementation that depends on the new boundary.
 - Use the generated clients, default Servers, Listeners, Runners, emitters, launchers, and configuration types. Do not hand-write parallel DTOs, interfaces, or protocol adapters.
+- With Vine `v0.13.1`, skelc `v0.12.0` or later generates typed in-process request/result clone hooks. Older generated specs use Vine's serialization fallback. Preserve generated `MethodSpec` ownership and test value isolation; use a real Rpc transport when validating JSON/CBOR behavior.
 
 Do not import `go.yorun.ai/vine/internal/*` or copy internal transport, registry, or executor implementations. Ordinary applications should use only `app`, `core/*`, `infra/*`, `util/*`, and the generated facades.
 
@@ -143,10 +144,11 @@ Do not import `go.yorun.ai/vine/internal/*` or copy internal transport, registry
 ### Decide on the Frontend After the Server
 
 - Complete the server contract, generation, implementation, tests, and layout validation first. If the original request did not mention a frontend, ask the user after the server is complete. Do not create `src/web/` or frontend configuration before receiving an explicit answer.
-- Once the user confirms a frontend, create the browser package in `src/web/`, leave `src/server/` untouched, and read [frontend-vrpc.md](references/frontend-vrpc.md) for the generated TypeScript vRPC, Portal WEBGW, state layer, and validation. Only now copy and adapt the [Linux launcher](scripts/start_vine_app.sh) and the [Windows launcher](scripts/start_vine_app.bat) (replace the template's `demo` with the real project name; set `VINE_PREPARE_PACKAGE=./src/server/cmd/migrate` only when the project actually contains that migration entry).
+- Once the user confirms a frontend, create the browser package in `src/web/`, leave `src/server/` untouched, and read [frontend-vrpc.md](references/frontend-vrpc.md) for the generated TypeScript vRPC, Portal WEBGW, state layer, and validation. Only now copy and adapt the [Linux launcher](scripts/start_vine_app.sh) and the [Windows launcher](scripts/start_vine_app.bat) (replace the template's `demo` with the real project name; set `VINE_PREPARE_PACKAGE=./cmd/migrate` only when the project actually contains that migration entry).
 
 ### Wire the Application
 
+- Treat `src/server/` as the server Go module root, keep `go.mod` and `go.sum` there, and run Go commands from that directory. Maintain a separate `go.mod` under `skeled/golang/`; require that generated-code module at `v0.0.0` from the server module and use `replace <module>/skeled/golang => ../../skeled/golang`. Do not copy generated Go code into `src/server/`.
 - Keep `src/server/cmd/<name>/main.go` thin: it only selects the runtime mode and starts the application. Put the App definition and dependency wiring in `src/server/app/app.go`.
 - Make the application name match `^[a-z]+(?:\.[a-z]+)*$`. Declare Components and Modules as pointer types, each type only once.
 - Use Components for databases, Redis, and other infrastructure. Use Modules for business services, workers, and business lifecycle resources.
@@ -180,7 +182,7 @@ Do not import `go.yorun.ai/vine/internal/*` or copy internal transport, registry
 
 - `instant` configuration affects only later DI resolutions; it does not update already-injected pointers in place.
 - Event and Task delivery may retry by default. Put a stable business ID in the contract, keep side effects idempotent, and observe cancellation.
-- Do not promise unverified Event/Task ordering, DLQs, replay, synchronous results, or disk durability.
+- Embedded NATS provisions memory-backed `VINE_EVENTS` and `VINE_TASKS`. External NATS must pre-provision both streams before Hub or Link starts and owns storage/replication. Do not promise Event/Task ordering, DLQs, replay, synchronous results, or restart durability without verified file-backed recovery evidence.
 - Vine RDB does not migrate business tables automatically. Treat migrations as an explicit deployment step.
 - A Redis lock is an expiring coordination lease without a fencing token. Observe `Lock.Context()`; do not unconditionally `defer Unlock()` for work that may lose the lock.
 - Use `core/ex` to express stable cross-boundary errors. Do not construct unregistered error codes.
@@ -208,14 +210,16 @@ Run validation according to impact and retain raw evidence:
 
 | Impact | Minimum validation |
 | --- | --- |
-| New-project skeleton | Verify root-level `skel/*.skel`, `skeled/golang/`, `skeled/typescript/`, the `src/server/` directories, and `src/server/seed/hub.yaml`. Confirm that no root-level server directories, `seed/`, or `web/` exist, and that `src/web/` exists only after the frontend is confirmed |
+| New-project skeleton | Verify root-level `skel/*.skel`, `skeled/golang/`, `skeled/typescript/`, the `src/server/` directories, and `src/server/seed/hub.yaml`. Confirm that `skeled/golang/go.mod` exists and that `src/server/go.mod` requires it at `v0.0.0` with a `replace` to `../../skeled/golang`. Confirm that no root-level server directories, `seed/`, or `web/` exist, and that `src/web/` exists only after the frontend is confirmed |
 | Business service organization | Verify that every public Service corresponds to a concrete entity or named use case; the names in `skel/`, `src/server/impl/`, `src/server/core/`, and `src/server/repo/` are traceable, the App registers all concrete Handlers, and no God Service named after the App aggregates every entity's logic |
 | Skel config usage | Verify that dependents inject the generated `*skeled.<Name>Config` directly; no field-mirroring `core.Config`, `NewConfig`, or `BindCommon` factory that exists only to convert the Config |
 | `.skel` or generated code | Pinned `skelc check`, project generation commands, and generated-diff review |
 | Go implementation | `gofmt`, targeted package tests; run `go test ./...` when risk permits |
 | Public API, reflection, concurrency, or runtime wiring | Targeted tests, `go test ./...`, `go vet ./...` |
 | Rpc/Web/Event/Task/DI | `app/testkit` behavior tests; one test package shares one standalone runtime |
+| In-process Rpc or generated clone changes | Standalone value-isolation tests plus a `vine dev` or separated JSON/CBOR wire test when codec behavior matters |
 | Vine upgrade, Dashboard assets, Hub/Portal/Link, or control-plane schema | Project-specific Dashboard origin, port ownership check, real control-plane request, and full service Skel name verification |
+| External NATS Event/Task | Pre-provision `VINE_EVENTS`/`VINE_TASKS`; verify subjects, retention, storage, replicas, reconnect, restart recovery, and idempotency |
 | Public Rpc schema, capability registration, Portal admission, or deployment topology | Real Portal/vRPC business call verifying Actor, trace, status mapping, and target service name |
 | Browser frontend delivery | `src/web` typecheck, test, lint, and build; combined launcher `--check`; real Portal WEBGW/vRPC; the final reply includes copyable required versions, first/subsequent/Windows startup commands, the preflight-only command, and access addresses |
 | Retry, timeout, or graceful stop | Forced failure, cancellation, duplicate delivery, and stop tests |

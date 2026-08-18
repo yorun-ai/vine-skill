@@ -6,6 +6,14 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Updated the tested baseline to Vine `v0.13.1` and skelc `v0.14.0` while retaining Vine's released Go `1.26.5` minimum
+- Documented the Vine `v0.13.0` external-NATS stream-provisioning boundary, including required `VINE_EVENTS`/`VINE_TASKS` retention and deployment-owned storage
+- Documented Vine `v0.13.1` and skelc `v0.12.0+` typed in-process Rpc cloning, the compatibility fallback for older generated specs, and the distinction between value-isolation and wire tests
+- Refreshed the official Vine, skelc, and website source revisions and updated example/CI pins
+- Replaced the manual Codex Skill clone instructions with `npx skills add yorun-ai/vine-skill`
+
 ## [0.2.0] - 2026-08-07
 
 ### Added

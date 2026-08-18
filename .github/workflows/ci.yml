@@ -32,7 +32,7 @@ jobs:
         run: npm install --global pnpm@10.15.0
 
       - name: Install pinned skelc
-        run: go install go.yorun.ai/skelc/cmd/skelc@v0.11.1
+        run: go install go.yorun.ai/skelc/cmd/skelc@v0.14.0
 
       - name: Validate skill package
         run: |
@@ -59,7 +59,8 @@ jobs:
             "$fixture/src/server/repo" \
             "$fixture/src/web/src" \
             "$fixture/src/web/node_modules"
-          printf 'module example.com/demo\n\ngo 1.26.5\n' > "$fixture/go.mod"
+          printf 'module example.com/demo/src/server\n\ngo 1.26.5\n\nrequire example.com/demo/skeled/golang v0.0.0\n\nreplace example.com/demo/skeled/golang => ../../skeled/golang\n' > "$fixture/src/server/go.mod"
+          printf 'module example.com/demo/skeled/golang\n\ngo 1.26.5\n' > "$fixture/skeled/golang/go.mod"
           printf 'appConfigs: []\n' > "$fixture/src/server/seed/hub.yaml"
           printf 'package app\n' > "$fixture/src/server/app/app.go"
           printf 'package main\n\nfunc main() {}\n' > "$fixture/src/server/cmd/demo/main.go"
@@ -71,13 +72,24 @@ jobs:
         working-directory: references/example-greeting
         run: |
           skelc check --skel-in ./skel
-          skelc gen go --skel-in ./skel --go-out ./skeled/golang --go-vine-version v0.12.0
-          go mod init example.com/greeting
-          go get go.yorun.ai/vine@v0.12.0 github.com/google/uuid@v1.6.0
-          go mod tidy
-          go build ./...
-          go test ./...
-          go vet ./...
+          skelc gen go --skel-in ./skel --go-out ./skeled/golang --go-vine-version v0.13.1
+          (
+            cd skeled/golang
+            go mod init example.com/greeting/skeled/golang
+            go get go.yorun.ai/vine@v0.13.1
+            go mod tidy
+          )
+          (
+            cd src/server
+            go mod init example.com/greeting/src/server
+            go mod edit -require=example.com/greeting/skeled/golang@v0.0.0
+            go mod edit -replace=example.com/greeting/skeled/golang=../../skeled/golang
+            go get go.yorun.ai/vine@v0.13.1 github.com/google/uuid@v1.6.0
+            go mod tidy
+            go build ./...
+            go test ./...
+            go vet ./...
+          )
 
   windows-launcher:
     name: CI / Windows Launcher
@@ -120,7 +132,8 @@ jobs:
           foreach ($directory in $directories) {
             New-Item -ItemType Directory -Force -Path (Join-Path $fixture $directory) | Out-Null
           }
-          Set-Content -Path (Join-Path $fixture "go.mod") -Value "module example.com/demo`n`ngo 1.26.5"
+          Set-Content -Path (Join-Path $fixture "src/server/go.mod") -Value "module example.com/demo/src/server`n`ngo 1.26.5`n`nrequire example.com/demo/skeled/golang v0.0.0`n`nreplace example.com/demo/skeled/golang => ../../skeled/golang"
+          Set-Content -Path (Join-Path $fixture "skeled/golang/go.mod") -Value "module example.com/demo/skeled/golang`n`ngo 1.26.5"
           Set-Content -Path (Join-Path $fixture "src/server/seed/hub.yaml") -Value "appConfigs: []"
           Set-Content -Path (Join-Path $fixture "src/server/app/app.go") -Value "package app"
           Set-Content -Path (Join-Path $fixture "src/server/cmd/demo/main.go") -Value "package main`n`nfunc main() {}"

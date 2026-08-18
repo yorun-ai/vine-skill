@@ -40,6 +40,7 @@ REQUIRED_DELIVERY_TEXT = {
         "src/server/app/app.go",
         "src/server/cmd/<name>/main.go",
         "src/web/",
+        "replace <module>/skeled/golang => ../../skeled/golang",
     ),
     "references/foundations.md": (
         "./skeled/golang",
@@ -49,6 +50,8 @@ REQUIRED_DELIVERY_TEXT = {
         "src/server/app/app.go",
         "src/server/impl/",
         "src/server/repo/",
+        "skeled/golang/go.mod",
+        "replace example.com/demo/skeled/golang => ../../skeled/golang",
     ),
     "references/frontend-vrpc.md": (
         "web.NewReverseProxy",
@@ -70,7 +73,9 @@ REQUIRED_DELIVERY_TEXT = {
         "VINE_PREPARE_PACKAGE",
         "wait_for_public_page",
         "$PROJECT_ROOT/src/web",
-        "./src/server/cmd/demo",
+        "$SERVER_DIR/go.mod",
+        "$PROJECT_ROOT/skeled/golang/go.mod",
+        "./cmd/demo",
         "$PROJECT_ROOT/src/server/seed/hub.yaml",
     ),
     "scripts/start_vine_app.bat": (
@@ -79,7 +84,9 @@ REQUIRED_DELIVERY_TEXT = {
         "VINE_PREPARE_PACKAGE",
         ":wait_for_page",
         "%VINE_PROJECT_ROOT%\\src\\web",
-        "./src/server/cmd/demo",
+        "%VINE_SERVER_DIR%\\go.mod",
+        "%VINE_PROJECT_ROOT%\\skeled\\golang\\go.mod",
+        "./cmd/demo",
         "%VINE_PROJECT_ROOT%\\src\\server\\seed\\hub.yaml",
     ),
 }

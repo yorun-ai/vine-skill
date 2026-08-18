@@ -4,8 +4,9 @@ Priority order: source and GoDoc at the target project's pinned revision > corre
 
 ## Research Baseline
 
-- Vine source: [`v0.12.0`](https://github.com/yorun-ai/vine/tree/v0.12.0), commit `63bb89b4ae7ce366a26426c2362dacc84de60e83`.
-- Documentation source: [`6a1a0269`](https://github.com/yorun-ai/vine-site/tree/6a1a0269d76b4d1a25fbd056e4b0d07b09e95cbc), 2026-08-03.
+- Vine source: [`v0.13.1`](https://github.com/yorun-ai/vine/tree/v0.13.1), commit `167e6aca8d88ec51c12acf2a8d1cc2c6e8cfa119`.
+- Skelc source: [`v0.14.0`](https://github.com/yorun-ai/skelc/tree/v0.14.0), commit `feffe824a394a6625e98cc8fd2a7f6339b6d3ced`.
+- Documentation source: [`6bcc1712`](https://github.com/yorun-ai/vine-site/tree/6bcc1712f05b2fe7ec50388a613908d6e3abebd1), reviewed 2026-08-18.
 - English website: [Vine Docs](https://vine.yorun.ai/docs/).
 - Chinese website: [Vine Docs in Chinese](https://vine.yorun.ai/zh-CN/docs/).
 - Go symbols: [pkg.go.dev/go.yorun.ai/vine](https://pkg.go.dev/go.yorun.ai/vine).

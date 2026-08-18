@@ -1,6 +1,6 @@
 # Vine Runtime, Deployment, and Production Boundaries
 
-This reference is based on Vine `v0.12.0`. Use it for topology, routing, readiness, Hub/Link/Portal, CLI, mTLS, durability, rollout, and failure-drill tasks. CLI flags, default ports, and time constants may change by version. Verify them first with the target binary's supported `vine version` and `vine <command> --help`; do not assume that `version` accepts `--json`. The liveness timings, ports, and drain durations here are `v0.12.0` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
+This reference is based on Vine `v0.13.1`. Use it for topology, routing, readiness, Hub/Link/Portal, CLI, mTLS, durability, rollout, and failure-drill tasks. CLI flags, default ports, and time constants may change by version. Verify them first with the target binary's supported `vine version` and `vine <command> --help`; do not assume that `version` accepts `--json`. The liveness timings, ports, and drain durations here are `v0.13.1` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
@@ -89,7 +89,7 @@ Routing selection:
 - Failure of the selected endpoint returns from the current call. Retry explicitly only when idempotency and deadline allow it.
 - For Web, Portal selects a target Link from distributed endpoints, while that Link's webproxy indexes only local Apps.
 
-Network-mode liveness facts in `v0.12.0`:
+Network-mode liveness facts in `v0.13.1`:
 
 | Behavior | Current value |
 | --- | --- |
@@ -100,7 +100,7 @@ Network-mode liveness facts in `v0.12.0`:
 | Console ping timeout | 2 seconds |
 | Unregistration threshold | 3 consecutive non-timeout failures |
 
-Invocation timeout only logs and does not increment health failures; a stuck App may still have its lease renewed by Link. These are `v0.12.0` implementation constants (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list), not CLI tuning contracts.
+Invocation timeout only logs and does not increment health failures; a stuck App may still have its lease renewed by Link. These are `v0.13.1` implementation constants (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list), not CLI tuning contracts.
 
 Standalone disables TTL, heartbeat, sweeper, and App health checks. Linked retains Hub leases and heartbeats but skips App health checks because App and Link share a process.
 
@@ -125,7 +125,7 @@ Wrapper order:
 
 Operational shutdown order for separated mode: stop new external traffic → Apps → corresponding Links → Portal → Hub.
 
-Drain and stop timings in `v0.12.0` are implementation details (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference)): Link propagation grace is about 400 ms, in-flight Rpc/Event/Task drains for at most 30 seconds, App unregister RPC waits at most 1 minute, and App HTTP shutdown is about 10 seconds. Do not treat these values as stable CLI contracts. Orchestrator termination grace must cover the target version's actual boundaries.
+Drain and stop timings in `v0.13.1` are implementation details (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference)): Link propagation grace is about 400 ms, in-flight Rpc/Event/Task drains for at most 30 seconds, App unregister RPC waits at most 1 minute, and App HTTP shutdown is about 10 seconds. Do not treat these values as stable CLI contracts. Orchestrator termination grace must cover the target version's actual boundaries.
 
 ## CLI Baseline
 
@@ -139,7 +139,7 @@ vine link --help
 vine portal --help
 ```
 
-Local `v0.12.0` example:
+Local `v0.13.1` example:
 
 ```bash
 vine dev \
@@ -165,7 +165,7 @@ Hub must select exactly one database mode, SQLite or PostgreSQL, and exactly one
 
 Important current listeners:
 
-| Boundary | `v0.12.0` default/common value | Caller |
+| Boundary | `v0.13.1` default/common value | Caller |
 | --- | --- | --- |
 | Hub Control | `127.0.0.1:7071` | Link, Portal |
 | Hub Redis | `127.0.0.1:7072` | Link, Portal |
@@ -252,8 +252,21 @@ Other rules:
 - The Hub database is the source of truth for configuration and Portal rules, sites, and certificates.
 - Seed YAML imports initial state only; it is not a continuous backup.
 - Redis distributes runtime snapshots and changes; it is not the source-of-truth database.
-- External NATS requires JetStream. The target version accepts a `nats://` endpoint; authentication and TLS are the external system's responsibility.
-- In `v0.12.0`, Event/Task streams use memory storage. External NATS does not automatically make them disk-durable.
+- Embedded NATS provisions `VINE_EVENTS` for `event.>` with interest retention and `VINE_TASKS` for `task.>` with work-queue retention; both use memory storage.
+- External NATS requires JetStream and must pre-provision both streams before Hub or Link starts. Vine clients read the existing streams and do not create them or choose stream/consumer storage. Authentication, TLS, storage, replication, and backups belong to the external deployment.
+- For restart durability, provision file-backed external streams and test recovery with the production topology. A single-replica example is:
+
+```bash
+nats --server "$VINE_MQ_EXTERNAL_NATS_URL" stream add VINE_EVENTS \
+  --subjects "event.>" --retention interest \
+  --storage file --replicas 1 --defaults
+
+nats --server "$VINE_MQ_EXTERNAL_NATS_URL" stream add VINE_TASKS \
+  --subjects "task.>" --retention workqueue \
+  --storage file --replicas 1 --defaults
+```
+
+- Set replicas to the required redundancy in a cluster; do not copy the single-replica example unchanged.
 - Listener/Runner delivery is at least once, may retry forever, and promises no DLQ, replay, or ordering. Business operations must be idempotent and retain required durable records.
 - The current documentation defines only a single-Hub control plane, with no active-active or failover protocol. Starting multiple Hubs does not create HA.
 
@@ -269,7 +282,7 @@ Back up the Hub database and restore it in an isolated environment. After restor
 6. Execute a control-plane Rpc from the Dashboard origin. Confirm that the frontend's full service Skel name exists in the same-revision Hub schema, and test an uncached session when reusing an origin.
 7. Validate trace, Actor, Initiator, and remaining deadlines.
 8. Validate new executions for `instant` configuration and restart behavior for `eternal` configuration.
-9. Force Event/Task errors, timeouts, duplicates, and NATS reconnects, then check idempotency.
+9. For external NATS, verify both required streams, retention, storage, and replicas before Hub or Link starts; then force Event/Task errors, timeouts, duplicates, NATS reconnects, and restart recovery and check idempotency.
 10. Drill graceful App replacement, abrupt App loss, Link loss and lease expiry, and Link-to-Hub reconnect.
 11. Validate SPIFFE identities, certificate rotation/SNI, pinned ingress ports, and the firewall caller set.
 12. Back up and restore the Hub database, then inspect all control-plane state.

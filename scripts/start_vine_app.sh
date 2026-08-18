@@ -4,7 +4,8 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${VINE_PROJECT_ROOT:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
 WEB_DIR="${VINE_WEB_DIR:-$PROJECT_ROOT/src/web}"
-SERVER_PACKAGE="${VINE_SERVER_PACKAGE:-./src/server/cmd/demo}"
+SERVER_DIR="${VINE_SERVER_DIR:-$PROJECT_ROOT/src/server}"
+SERVER_PACKAGE="${VINE_SERVER_PACKAGE:-./cmd/demo}"
 PREPARE_PACKAGE="${VINE_PREPARE_PACKAGE:-}"
 HOST="${VINE_HOST:-127.0.0.1}"
 VITE_PORT="${VINE_VITE_PORT:-5174}"
@@ -36,11 +37,11 @@ Options:
   -h, --help Show this help.
 
 Optional environment overrides:
-  VINE_PROJECT_ROOT, VINE_WEB_DIR, VINE_SERVER_PACKAGE,
+  VINE_PROJECT_ROOT, VINE_WEB_DIR, VINE_SERVER_DIR, VINE_SERVER_PACKAGE,
   VINE_PREPARE_PACKAGE, VINE_HOST, VINE_VITE_PORT,
   VINE_PUBLIC_PORT, VINE_DASHBOARD_PORT, VINE_STARTUP_TIMEOUT
 
-Set VINE_PREPARE_PACKAGE=./src/server/cmd/migrate only when the target project explicitly
+Set VINE_PREPARE_PACKAGE=./cmd/migrate only when the target project explicitly
 requires that preparation step. The script never infers or runs migrations.
 EOF
 }
@@ -228,18 +229,19 @@ is_positive_integer "$STARTUP_TIMEOUT" || fail "VINE_STARTUP_TIMEOUT must be a p
 [[ "$VITE_PORT" != "$DASHBOARD_PORT" ]] || fail "Vite and Dashboard ports must be distinct"
 [[ "$PUBLIC_PORT" != "$DASHBOARD_PORT" ]] || fail "Portal and Dashboard ports must be distinct"
 
-[[ -f "$PROJECT_ROOT/go.mod" ]] || fail "go.mod is missing from project root: $PROJECT_ROOT"
+[[ -f "$SERVER_DIR/go.mod" ]] || fail "go.mod is missing from server module root: $SERVER_DIR"
 [[ -d "$PROJECT_ROOT/skel" ]] || fail "hand-maintained contract directory is missing: $PROJECT_ROOT/skel"
 [[ -f "$PROJECT_ROOT/src/server/seed/hub.yaml" ]] || fail "Hub seed configuration is missing: $PROJECT_ROOT/src/server/seed/hub.yaml"
 [[ -d "$PROJECT_ROOT/skeled/golang" ]] || fail "generated Go directory is missing: $PROJECT_ROOT/skeled/golang"
+[[ -f "$PROJECT_ROOT/skeled/golang/go.mod" ]] || fail "generated Go module is missing: $PROJECT_ROOT/skeled/golang/go.mod"
 [[ -d "$PROJECT_ROOT/skeled/typescript" ]] || fail "generated TypeScript directory is missing: $PROJECT_ROOT/skeled/typescript"
 [[ -f "$PROJECT_ROOT/src/server/app/app.go" ]] || fail "Vine App definition is missing: $PROJECT_ROOT/src/server/app/app.go"
 [[ -d "$PROJECT_ROOT/src/server/core" ]] || fail "business core directory is missing: $PROJECT_ROOT/src/server/core"
 [[ -d "$PROJECT_ROOT/src/server/impl" ]] || fail "capability adapter directory is missing: $PROJECT_ROOT/src/server/impl"
 [[ -d "$PROJECT_ROOT/src/server/repo" ]] || fail "persistence directory is missing: $PROJECT_ROOT/src/server/repo"
 if [[ "$SERVER_PACKAGE" == ./* ]]; then
-    SERVER_DIR="$PROJECT_ROOT/${SERVER_PACKAGE#./}"
-    [[ -f "$SERVER_DIR/main.go" ]] || fail "Vine process entry is missing: $SERVER_DIR/main.go"
+    SERVER_ENTRY_DIR="$SERVER_DIR/${SERVER_PACKAGE#./}"
+    [[ -f "$SERVER_ENTRY_DIR/main.go" ]] || fail "Vine process entry is missing: $SERVER_ENTRY_DIR/main.go"
 fi
 [[ -d "$WEB_DIR/src" ]] || fail "frontend source directory is missing: $WEB_DIR/src"
 [[ -f "$WEB_DIR/package.json" ]] || fail "frontend package.json is missing: $WEB_DIR/package.json"
@@ -267,13 +269,13 @@ fi
 
 if [[ -n "$PREPARE_PACKAGE" ]]; then
     printf '[vine-start] run: go run %q\n' "$PREPARE_PACKAGE"
-    (cd -- "$PROJECT_ROOT" && go run "$PREPARE_PACKAGE")
+    (cd -- "$SERVER_DIR" && go run "$PREPARE_PACKAGE")
 fi
 
 start_child "$WEB_DIR" FRONTEND_PID FRONTEND_GROUP pnpm run dev
 wait_for_port "frontend" "$FRONTEND_PID" "$VITE_PORT"
 
-start_child "$PROJECT_ROOT" BACKEND_PID BACKEND_GROUP go run "$SERVER_PACKAGE"
+start_child "$SERVER_DIR" BACKEND_PID BACKEND_GROUP go run "$SERVER_PACKAGE"
 wait_for_public_page "$BACKEND_PID"
 
 printf '[vine-start] application: http://%s:%s/\n' "$HOST" "$PUBLIC_PORT"

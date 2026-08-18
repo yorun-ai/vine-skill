@@ -1,6 +1,6 @@
 # Vine Redis, RDB, Logging, and Testing
 
-This reference is based on Vine `v0.12.0`. Use it for infrastructure Components, sensitive logging, and `app/testkit` tasks. Values such as the lock lease here are `v0.12.0` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
+This reference is based on Vine `v0.13.1`. Use it for infrastructure Components, sensitive logging, and `app/testkit` tasks. Values such as the lock lease here are `v0.13.1` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
@@ -74,7 +74,7 @@ High-risk rules:
 - Do not unconditionally `defer lock.Unlock()` when work may outlast the lease.
 - Stop critical-section work immediately after context cancellation. If the business cannot accept the fail-fast unlock contract, use an explicit recovery/error boundary or choose a lock system with the required semantics.
 
-In `v0.12.0`, the default lock lease is 30 seconds with refresh. Verify public APIs and source when the target version differs.
+In `v0.13.1`, the default lock lease is 30 seconds with refresh. Verify public APIs and source when the target version differs.
 
 Common Cache operations are `Get`, `GetOrLoad`, `Set`, and `Delete`. A cache is not the business source of truth. Test keys, TTLs, misses, deserialization errors, and concurrent loads from the source.
 
