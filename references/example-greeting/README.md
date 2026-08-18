@@ -4,7 +4,7 @@ This directory is a **verified, compilable, testable** hello-world Vine **server
 a single `Greeting` entity persisted in sqlite, with **actor-authentication wiring** (login
 issues a session token, the Actor Auth Service validates it, and the welcome method consumes
 an authenticated actor). It demonstrates the wiring steps for implementing a minimal server
-with vine-skill (Go 1.26.5 / Vine v0.12.0 / skelc v0.11.1,
+with vine-skill (Go 1.26.6 / Vine v0.13.1 / skelc v0.14.0,
 Rpc + actor auth + config + sqlite).
 
 **Positioning: a pure server template.** This is a server development framework; the template
@@ -18,8 +18,10 @@ placeholder names (`greeting`, `example.com/greeting`, `GreetingActor`, `Greetin
 so on), then re-run the pinned `skelc check` / `skelc gen` gate as described in
 [SKILL.md](../../SKILL.md). **Generated code (`skeled/`) is not committed; it is regenerated
 by the pinned skelc.** This directory contains only hand-maintained `.skel` and `src/` files.
-After copying it, initialize the target `go.mod`, generate `skeled/` with the pinned tool, and
-resolve dependencies. Do not treat this ungenerated directory itself as a buildable Go module.
+After copying it, generate `skeled/` with the pinned tool, initialize both
+`skeled/golang/go.mod` and `src/server/go.mod`, and make the server module require the generated
+module through a local `replace`. Do not treat this ungenerated directory itself as a buildable
+Go module.
 
 ## Layout
 
@@ -69,7 +71,19 @@ Event/Task, no frontend.
   itself writes `noauth`.
 
 ### 2. Generation and implementation
-- Generate Go: `skelc gen go --skel-in ./skel --go-out ./skeled/golang --go-vine-version <pinned>`
+- Generate Go for this baseline: `skelc gen go --skel-in ./skel --go-out ./skeled/golang --go-vine-version v0.13.1`. For another target project, replace the version with its reviewed pin.
+- Initialize and connect the two Go modules from the project root:
+
+```bash
+(cd skeled/golang && go mod init example.com/greeting/skeled/golang)
+(cd skeled/golang && go get go.yorun.ai/vine@v0.13.1 && go mod tidy)
+(cd src/server && go mod init example.com/greeting/src/server)
+(cd src/server && go mod edit -require=example.com/greeting/skeled/golang@v0.0.0)
+(cd src/server && go mod edit -replace=example.com/greeting/skeled/golang=../../skeled/golang)
+(cd src/server && go get go.yorun.ai/vine@v0.13.1 github.com/google/uuid@v1.6.0)
+(cd src/server && go mod tidy)
+```
+
 - Impl Handlers **embed `Default...Server` (plain style)**; methods **return values only, no
   error**. Business errors are expressed with `ex.PanicNew(...)` in core and recovered by the
   framework into structured error responses. Use the ER variant (`Default...ServerER` + ER
@@ -142,8 +156,9 @@ Gotchas:
 ## Startup
 
 ```bash
-# 1. Start the server (from the project root)
-go run ./src/server/cmd/greeting
+# 1. Start the server (from the server Go module root)
+cd src/server
+go run ./cmd/greeting
 
 # 2. Required delivery check with a vRPC client against Portal RPCGW
 #    Entry http://127.0.0.1:7188/api/invoke
@@ -153,7 +168,7 @@ go run ./src/server/cmd/greeting
 #    CRUD: greeting.GreetingService/createGreeting etc.
 ```
 
-Internal behavior is covered by `go test ./...`. This template does not bundle a browser
+Internal behavior is covered by `go test ./...` from `src/server/`. This template does not bundle a browser
 client, but before claiming runnable delivery, public Rpc schema availability, or successful
 actor admission, call the Portal/RPCGW path above with an actual vRPC client such as
 `@yorun-ai/vrpc` and retain the evidence. The Dashboard control plane is at

@@ -198,7 +198,7 @@ Use a different, project-specific Dashboard origin and load the seed from the St
 
 ```go
 standalone.NewWithOption[*application.ConsoleApp](standalone.Option{
-    SeedYAMLFile: "./src/server/seed/hub.yaml",
+    SeedYAMLFile: "./seed/hub.yaml",
     SQLiteFile:   "./data/hub.sqlite",
     DashboardURL: "http://127.0.0.1:7299/",
 }).StartAndWait()
@@ -251,7 +251,7 @@ rem Windows Command Prompt, later runs
 scripts\start_vine_app.bat
 ```
 
-Enter this section and create `src/web/` only after the user explicitly confirms a frontend. Use `--check` to validate root-level `skel/` and `skeled/`, the standard server directories `src/server/` and `src/server/seed/hub.yaml`, the frontend package `src/web/`, `go`/`pnpm`, frontend dependencies, and port availability without starting any process. The scripts require only the platform shell plus the project's existing Go and pnpm prerequisites; they must not require Python. If a port is occupied, stop and report it; do not terminate the existing process. Set `VINE_PREPARE_PACKAGE=./src/server/cmd/migrate` if and only if the project explicitly contains a migration entry and requires a preparation command; never infer a migration from directory names.
+Enter this section and create `src/web/` only after the user explicitly confirms a frontend. Use `--check` to validate root-level `skel/` and `skeled/`, the generated module at `skeled/golang/go.mod`, `go.mod` under `src/server/`, the standard server directories and `src/server/seed/hub.yaml`, the frontend package `src/web/`, `go`/`pnpm`, frontend dependencies, and port availability without starting any process. The server `go.mod` must require the generated module at `v0.0.0` and replace it with `../../skeled/golang`. The scripts require only the platform shell plus the project's existing Go and pnpm prerequisites; they must not require Python. If a port is occupied, stop and report it; do not terminate the existing process. Set `VINE_PREPARE_PACKAGE=./cmd/migrate` if and only if the project explicitly contains a migration entry and requires a preparation command; never infer a migration from directory names.
 
 A delivery reply cannot just say "the frontend is done" or point the user at the README. The final reply must directly provide:
 
@@ -270,8 +270,9 @@ cd src/web
 pnpm install
 pnpm dev
 
-# Terminal 2, from the project root
-go run ./src/server/cmd/demo
+# Terminal 2, from the server Go module root
+cd src/server
+go run ./cmd/demo
 ```
 
 Replace the example entry `demo` with the real project name. Do not move existing server directories when adding the frontend.

@@ -37,7 +37,7 @@ Generated Vine applications used for manual validation are disposable fixtures, 
 
 ## Updating version facts
 
-The current research baseline is Vine `v0.12.0`, skelc `v0.11.1`, and Go `1.26.5` or later. A version update must include:
+The current tested toolchain baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.1` itself retains a Go `1.26.5` module floor. A version update must include:
 
 - primary-source evidence from the matching release, source revision, GoDoc, tests, or release notes;
 - synchronized version claims across `SKILL.md`, relevant references, and both repository READMEs;
@@ -69,8 +69,8 @@ Also verify:
 - realistic prompts route to the correct reference material;
 - no generated fixture, database, dependency directory, build output, token, or private key is included.
 
-CI regenerates `references/example-greeting` with skelc `v0.11.1`, builds and tests it against
-Vine `v0.12.0`, runs `go vet`, rejects unformatted Go, and exercises the Windows launcher
+CI regenerates `references/example-greeting` with skelc `v0.14.0`, builds and tests it against
+Vine `v0.13.1`, runs `go vet`, rejects unformatted Go, and exercises the Windows launcher
 `--check` path with a disposable fixture.
 
 When launcher behavior changes, test `--check`, first-run installation, readiness, occupied-port refusal, and cleanup in a disposable Vine browser-app fixture. Review Windows Batch changes on Windows or in Windows CI when available; otherwise report that limitation explicitly.

@@ -4,14 +4,14 @@
 
 [许可证](./LICENSE) · [变更日志](./CHANGELOG.md) · [贡献指南](./CONTRIBUTING.md)
 
-[![Vine](https://img.shields.io/badge/Vine-v0.12.0-f97316)](https://github.com/yorun-ai/vine/tree/v0.12.0)
-[![Go](https://img.shields.io/badge/Go-%3E%3D1.26.5-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
-[![skelc](https://img.shields.io/badge/skelc-v0.11.1-0097a7)](https://skel.yorun.ai/docs/)
+[![Vine](https://img.shields.io/badge/Vine-v0.13.1-f97316)](https://github.com/yorun-ai/vine/tree/v0.13.1)
+[![Go](https://img.shields.io/badge/Go-%3E%3D1.26.6-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
+[![skelc](https://img.shields.io/badge/skelc-v0.14.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
 这是一个具备版本意识的 Codex Skill，用于开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务。新项目默认先交付服务端，只有明确确认后才追加前端。
 
-本仓库的参考基线为 Vine `v0.12.0`、skelc `v0.11.1` 和 Go `1.26.5` 或更高版本。目标项目自身固定的版本始终优先。
+本仓库的实测工具链基线为 Vine `v0.13.1`、skelc `v0.14.0` 和 Go `1.26.6` 或更高版本；Vine `v0.13.1` 自身的 Go module 下限仍为 `1.26.5`。目标项目自身固定的版本始终优先。
 
 ## 核心行为
 
@@ -31,18 +31,16 @@ Skill 新建项目时先统一使用以下纯服务端骨架，项目名和服�
 
 ```text
 demo/
-├── go.mod
-├── go.sum
 ├── skel/
 │   ├── domain.skel
 │   └── greeting_service.skel
 ├── skeled/
 │   ├── golang/
+│   │   ├── go.mod
+│   │   └── go.sum
 │   └── typescript/
 └── src/
     ├── server/
-    │   ├── seed/
-    │   │   └── hub.yaml
     │   ├── app/
     │   │   └── app.go
     │   ├── cmd/
@@ -50,11 +48,15 @@ demo/
     │   │       └── main.go
     │   ├── core/
     │   ├── impl/
-    │   └── repo/
+    │   ├── repo/
+    │   ├── seed/
+    │   │   └── hub.yaml
+    │   ├── go.mod
+    │   └── go.sum
     └── web/          # 用户确认前端后才创建
 ```
 
-默认服务端骨架包含 `src/server/`，且不创建根级 `app/`、`cmd/`、`core/`、`impl/`、`repo/`、`seed/`、`web/`，也不包含 `internal/`。现有项目除非明确要求迁移，否则保持既有布局。
+默认服务端骨架以 `src/server/` 为服务端 Go module 根目录，以 `skeled/golang/` 为生成代码 module。`src/server/go.mod` 以 `v0.0.0` require 该生成 module，并用 `replace` 指向 `../../skeled/golang`。骨架不创建根级 `go.mod`、`go.sum`、`app/`、`cmd/`、`core/`、`impl/`、`repo/`、`seed/`、`web/`，也不包含 `internal/`。现有项目除非明确要求迁移，否则保持既有布局。
 
 ## 仓库结构
 
@@ -78,13 +80,19 @@ demo/
 
 ## 安装
 
-把仓库克隆到 Codex skills 目录：
+安装前请确保本机已有 [Node.js](https://nodejs.org/) 和 OpenAI Codex。
+
+使用 npx 安装 Skill：
 
 ```bash
-git clone <repository-url> "${CODEX_HOME:-$HOME/.codex}/skills/vine-skill"
+npx skills add yorun-ai/vine-skill
 ```
 
-安装后通过 `$vine-skill` 显式调用。
+新建一个 Codex 任务，让 Codex 发现刚安装的 Skill，然后通过 `$vine-skill` 显式调用，例如：
+
+```text
+使用 $vine-skill 创建一个 Vine 服务。
+```
 
 ## 版本安全
 

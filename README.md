@@ -4,14 +4,14 @@
 
 [License](./LICENSE) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
-[![Vine](https://img.shields.io/badge/Vine-v0.12.0-f97316)](https://github.com/yorun-ai/vine/tree/v0.12.0)
-[![Go](https://img.shields.io/badge/Go-%3E%3D1.26.5-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
-[![skelc](https://img.shields.io/badge/skelc-v0.11.1-0097a7)](https://skel.yorun.ai/docs/)
+[![Vine](https://img.shields.io/badge/Vine-v0.13.1-f97316)](https://github.com/yorun-ai/vine/tree/v0.13.1)
+[![Go](https://img.shields.io/badge/Go-%3E%3D1.26.6-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
+[![skelc](https://img.shields.io/badge/skelc-v0.14.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
 A version-aware Codex skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services. New projects are delivered server-first; a frontend is added only after explicit confirmation.
 
-The reference baseline is Vine `v0.12.0`, skelc `v0.11.1`, and Go `1.26.5` or later. A target project's pinned versions always take precedence.
+The tested toolchain baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.1` itself retains a Go `1.26.5` module floor. A target project's pinned versions always take precedence.
 
 ## Core behavior
 
@@ -31,18 +31,16 @@ New projects created by the Skill initially use this server-only skeleton. Proje
 
 ```text
 demo/
-├── go.mod
-├── go.sum
 ├── skel/
 │   ├── domain.skel
 │   └── greeting_service.skel
 ├── skeled/
 │   ├── golang/
+│   │   ├── go.mod
+│   │   └── go.sum
 │   └── typescript/
 └── src/
     ├── server/
-    │   ├── seed/
-    │   │   └── hub.yaml
     │   ├── app/
     │   │   └── app.go
     │   ├── cmd/
@@ -50,11 +48,15 @@ demo/
     │   │       └── main.go
     │   ├── core/
     │   ├── impl/
-    │   └── repo/
+    │   ├── repo/
+    │   ├── seed/
+    │   │   └── hub.yaml
+    │   ├── go.mod
+    │   └── go.sum
     └── web/          # created only after the user confirms the frontend
 ```
 
-The default server skeleton includes `src/server/` and never creates root-level `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `seed/`, or `web/`, and contains no `internal/`. Existing projects retain their established layout unless migration is explicitly requested.
+The default server skeleton uses `src/server/` as the server Go module root and `skeled/golang/` as the generated-code module. `src/server/go.mod` requires the generated module at `v0.0.0` and replaces it with `../../skeled/golang`. The skeleton never creates root-level `go.mod`, `go.sum`, `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `seed/`, or `web/`, and contains no `internal/`. Existing projects retain their established layout unless migration is explicitly requested.
 
 ## Repository layout
 
@@ -78,13 +80,19 @@ The files under `scripts/` are optional Linux Bash and Windows Command Prompt la
 
 ## Install
 
-Clone the repository into the Codex skills directory:
+Prerequisites: [Node.js](https://nodejs.org/) and OpenAI Codex.
+
+Install the Skill with npx:
 
 ```bash
-git clone <repository-url> "${CODEX_HOME:-$HOME/.codex}/skills/vine-skill"
+npx skills add yorun-ai/vine-skill
 ```
 
-Invoke the installed skill explicitly as `$vine-skill`.
+Start a new Codex task so the installed Skill is discovered, then invoke it explicitly as `$vine-skill`, for example:
+
+```text
+Use $vine-skill to create a Vine service.
+```
 
 ## Version safety
 

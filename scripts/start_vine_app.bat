@@ -6,7 +6,8 @@ for %%I in ("%SCRIPT_DIR%..") do set "DEFAULT_PROJECT_ROOT=%%~fI"
 
 if not defined VINE_PROJECT_ROOT set "VINE_PROJECT_ROOT=%DEFAULT_PROJECT_ROOT%"
 if not defined VINE_WEB_DIR set "VINE_WEB_DIR=%VINE_PROJECT_ROOT%\src\web"
-if not defined VINE_SERVER_PACKAGE set "VINE_SERVER_PACKAGE=./src/server/cmd/demo"
+if not defined VINE_SERVER_DIR set "VINE_SERVER_DIR=%VINE_PROJECT_ROOT%\src\server"
+if not defined VINE_SERVER_PACKAGE set "VINE_SERVER_PACKAGE=./cmd/demo"
 if not defined VINE_PREPARE_PACKAGE set "VINE_PREPARE_PACKAGE="
 if not defined VINE_HOST set "VINE_HOST=127.0.0.1"
 if not defined VINE_VITE_PORT set "VINE_VITE_PORT=5174"
@@ -42,8 +43,8 @@ set "EXIT_CODE=2"
 goto help_with_code
 
 :args_done
-if not exist "%VINE_PROJECT_ROOT%\go.mod" (
-    echo [vine-start] error: go.mod is missing from project root: %VINE_PROJECT_ROOT% 1>&2
+if not exist "%VINE_SERVER_DIR%\go.mod" (
+    echo [vine-start] error: go.mod is missing from server module root: %VINE_SERVER_DIR% 1>&2
     set "EXIT_CODE=1"
     goto cleanup
 )
@@ -59,6 +60,11 @@ if not exist "%VINE_PROJECT_ROOT%\src\server\seed\hub.yaml" (
 )
 if not exist "%VINE_PROJECT_ROOT%\skeled\golang\" (
     echo [vine-start] error: generated Go directory is missing: %VINE_PROJECT_ROOT%\skeled\golang 1>&2
+    set "EXIT_CODE=1"
+    goto cleanup
+)
+if not exist "%VINE_PROJECT_ROOT%\skeled\golang\go.mod" (
+    echo [vine-start] error: generated Go module is missing: %VINE_PROJECT_ROOT%\skeled\golang\go.mod 1>&2
     set "EXIT_CODE=1"
     goto cleanup
 )
@@ -88,8 +94,8 @@ if not exist "%VINE_PROJECT_ROOT%\src\server\repo\" (
     goto cleanup
 )
 set "VINE_SERVER_PATH=%VINE_SERVER_PACKAGE:/=\%"
-if not exist "%VINE_PROJECT_ROOT%\%VINE_SERVER_PATH%\main.go" (
-    echo [vine-start] error: Vine process entry is missing: %VINE_PROJECT_ROOT%\%VINE_SERVER_PATH%\main.go 1>&2
+if not exist "%VINE_SERVER_DIR%\%VINE_SERVER_PATH%\main.go" (
+    echo [vine-start] error: Vine process entry is missing: %VINE_SERVER_DIR%\%VINE_SERVER_PATH%\main.go 1>&2
     set "EXIT_CODE=1"
     goto cleanup
 )
@@ -180,7 +186,7 @@ if "%INSTALL%"=="1" (
 
 if defined VINE_PREPARE_PACKAGE (
     echo [vine-start] run: go run %VINE_PREPARE_PACKAGE%
-    pushd "%VINE_PROJECT_ROOT%"
+    pushd "%VINE_SERVER_DIR%"
     go run "%VINE_PREPARE_PACKAGE%"
     if errorlevel 1 (
         popd
@@ -201,7 +207,7 @@ if errorlevel 1 (
 )
 
 echo [vine-start] start Vine server: go run %VINE_SERVER_PACKAGE%
-start "%BACKEND_TITLE%" /D "%VINE_PROJECT_ROOT%" cmd.exe /D /C "go run %VINE_SERVER_PACKAGE%"
+start "%BACKEND_TITLE%" /D "%VINE_SERVER_DIR%" cmd.exe /D /C "go run %VINE_SERVER_PACKAGE%"
 set "BACKEND_STARTED=1"
 call :wait_for_page
 if errorlevel 1 (
@@ -325,9 +331,9 @@ echo   --check    Validate files, commands, dependencies, and ports without star
 echo   -h, --help Show this help.
 echo.
 echo Optional environment overrides:
-echo   VINE_PROJECT_ROOT, VINE_WEB_DIR, VINE_SERVER_PACKAGE,
+echo   VINE_PROJECT_ROOT, VINE_WEB_DIR, VINE_SERVER_DIR, VINE_SERVER_PACKAGE,
 echo   VINE_PREPARE_PACKAGE, VINE_HOST, VINE_VITE_PORT,
 echo   VINE_PUBLIC_PORT, VINE_DASHBOARD_PORT, VINE_STARTUP_TIMEOUT
 echo.
-echo Set VINE_PREPARE_PACKAGE=./src/server/cmd/migrate only when explicitly required.
+echo Set VINE_PREPARE_PACKAGE=./cmd/migrate only when explicitly required.
 goto cleanup
