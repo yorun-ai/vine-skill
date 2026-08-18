@@ -5,13 +5,13 @@
 [许可证](./LICENSE) · [变更日志](./CHANGELOG.md) · [贡献指南](./CONTRIBUTING.md)
 
 [![Vine](https://img.shields.io/badge/Vine-v0.13.1-f97316)](https://github.com/yorun-ai/vine/tree/v0.13.1)
-[![Go](https://img.shields.io/badge/Go-%3E%3D1.26.5-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
+[![Go](https://img.shields.io/badge/Go-%3E%3D1.26.6-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
 [![skelc](https://img.shields.io/badge/skelc-v0.14.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
 这是一个具备版本意识的 Codex Skill，用于开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务。新项目默认先交付服务端，只有明确确认后才追加前端。
 
-本仓库的参考基线为 Vine `v0.13.1`、skelc `v0.14.0` 和 Go `1.26.5` 或更高版本。目标项目自身固定的版本始终优先。
+本仓库的实测工具链基线为 Vine `v0.13.1`、skelc `v0.14.0` 和 Go `1.26.6` 或更高版本；Vine `v0.13.1` 自身的 Go module 下限仍为 `1.26.5`。目标项目自身固定的版本始终优先。
 
 ## 核心行为
 

@@ -41,7 +41,7 @@ For the released `v0.13.1` baseline:
 
 | Item | Baseline |
 | --- | --- |
-| Go | `1.26.5` or later (`v0.13.1` source); the reviewed website `next` now uses `1.26.6` |
+| Go toolchain | `1.26.6` or later because skelc `v0.14.0` requires it; Vine `v0.13.1` itself retains a `1.26.5` module floor |
 | Vine | `v0.13.1` source baseline |
 | Minimum skelc | `v0.9.0` |
 | Tested skelc | `v0.14.0` |
@@ -72,10 +72,11 @@ corresponding source / GoDoc / tests / CHANGELOG. Do not rely on memory.
 
 | Item | v0.13.1 baseline | How to verify |
 | --- | --- | --- |
-| Go | `1.26.5` or later for Vine `v0.13.1`; reviewed website `next` uses `1.26.6` | `go version` and the pinned Vine `go.mod` |
+| Go toolchain | `1.26.6` or later because skelc `v0.14.0` requires it | `go version` and the pinned skelc `go.mod` |
+| Vine module Go floor | `1.26.5` for Vine `v0.13.1` | The pinned Vine `go.mod` |
 | Vine | `v0.13.1` source baseline | `go list -m -json go.yorun.ai/vine` |
 | Minimum skelc | `v0.9.0` | `vine version` (note its `MinSkelcVersion`) |
-| Measured baseline (this skill) | skelc `v0.14.0` / Vine `v0.13.1` / Go `1.26.5` | `skelc version` / `vine version` / `go version` |
+| Measured baseline (this skill) | skelc `v0.14.0` / Vine `v0.13.1` / Go `1.26.6` | `skelc version` / `vine version` / `go version` |
 
 The minimum skelc version is only the runtime floor, not a recommendation to use the latest
 version. For production, use an exact tag or commit that has already been used to generate,

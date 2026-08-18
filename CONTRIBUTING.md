@@ -37,7 +37,7 @@ Generated Vine applications used for manual validation are disposable fixtures, 
 
 ## Updating version facts
 
-The current research baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.5` or later. A version update must include:
+The current tested toolchain baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.1` itself retains a Go `1.26.5` module floor. A version update must include:
 
 - primary-source evidence from the matching release, source revision, GoDoc, tests, or release notes;
 - synchronized version claims across `SKILL.md`, relevant references, and both repository READMEs;

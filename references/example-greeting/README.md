@@ -4,7 +4,7 @@ This directory is a **verified, compilable, testable** hello-world Vine **server
 a single `Greeting` entity persisted in sqlite, with **actor-authentication wiring** (login
 issues a session token, the Actor Auth Service validates it, and the welcome method consumes
 an authenticated actor). It demonstrates the wiring steps for implementing a minimal server
-with vine-skill (Go 1.26.5 / Vine v0.13.1 / skelc v0.14.0,
+with vine-skill (Go 1.26.6 / Vine v0.13.1 / skelc v0.14.0,
 Rpc + actor auth + config + sqlite).
 
 **Positioning: a pure server template.** This is a server development framework; the template
