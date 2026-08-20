@@ -39,6 +39,24 @@ jobs:
           python3 -m unittest discover -s scripts -p 'test_*.py'
           python3 scripts/validate_skill.py
 
+      - name: Validate Codex, Claude Code, and OpenCode installation
+        run: |
+          fixture="$RUNNER_TEMP/vine-skill-hosts"
+          mkdir -p "$fixture"
+          git -C "$fixture" init
+          (
+            cd "$fixture"
+            npx --yes skills@1.5.23 add "$GITHUB_WORKSPACE" \
+              --agent codex claude-code opencode \
+              --skill vine-skill \
+              --yes \
+              --copy
+          )
+          cmp "$GITHUB_WORKSPACE/SKILL.md" "$fixture/.agents/skills/vine-skill/SKILL.md"
+          cmp "$GITHUB_WORKSPACE/SKILL.md" "$fixture/.claude/skills/vine-skill/SKILL.md"
+          test -f "$fixture/.agents/skills/vine-skill/references/agent-hosts.md"
+          test -f "$fixture/.claude/skills/vine-skill/references/agent-hosts.md"
+
       - name: Validate launcher syntax and Go formatting
         run: |
           bash -n scripts/start_vine_app.sh

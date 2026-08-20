@@ -9,9 +9,19 @@
 [![skelc](https://img.shields.io/badge/skelc-v0.14.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-A version-aware Codex skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services. New projects are delivered server-first; a frontend is added only after explicit confirmation.
+A version-aware Agent Skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services with Codex, Claude Code, or OpenCode. New projects are delivered server-first; a frontend is added only after explicit confirmation.
 
 The tested toolchain baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.1` itself retains a Go `1.26.5` module floor. A target project's pinned versions always take precedence.
+
+## Supported agent hosts
+
+The package uses the open Agent Skills `SKILL.md` contract as its single source of workflow truth. Host-specific discovery, invocation, permissions, and optional presentation metadata stay outside the core workflow.
+
+| Host | Project skill location | Explicit invocation |
+| --- | --- | --- |
+| Codex | `.agents/skills/vine-skill/` | `$vine-skill` |
+| Claude Code | `.claude/skills/vine-skill/` | `/vine-skill` |
+| OpenCode | `.opencode/skills/vine-skill/`, `.claude/skills/vine-skill/`, or `.agents/skills/vine-skill/` | Ask OpenCode to use `vine-skill` |
 
 ## Core behavior
 
@@ -22,6 +32,7 @@ The tested toolchain baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6
 - Keep execution-scoped contexts, clients, DAOs, caches, and lockers inside their owning execution.
 - Match validation evidence to standalone, linked, or separated runtime topology.
 - Diagnose read-only unless the request authorizes implementation.
+- Use only capabilities exposed by the active agent host and report missing evidence when a required tool or permission is unavailable.
 - Create new projects server-first with the standard skeleton: contracts in root `skel/`, generated artifacts in `skeled/`, and Hub seed plus hand-written code under `src/server/`, with no `src/web/` until confirmed.
 - After the server is complete, ask whether a frontend is needed and create `src/web/` only after confirmation.
 
@@ -68,8 +79,9 @@ The default server skeleton uses `src/server/` as the server Go module root and 
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SKILL.md
-├── agents/openai.yaml
+├── agents/openai.yaml          # Codex/ChatGPT adapter metadata
 ├── references/
+│   └── agent-hosts.md          # host compatibility details
 ├── scripts/
 └── .github/workflows/ci.yml
 ```
@@ -78,21 +90,25 @@ The default server skeleton uses `src/server/` as the server Go module root and 
 
 The files under `scripts/` are optional Linux Bash and Windows Command Prompt launcher templates copied only after the user confirms a frontend.
 
-## Install
+## Installation
 
-Prerequisites: [Node.js](https://nodejs.org/) and OpenAI Codex.
+Prerequisites: [Node.js](https://nodejs.org/) `>=22.20.0` for the pinned installer and at least one supported agent host.
 
-Install the Skill with npx:
+Install `vine-skill` globally for Codex, Claude Code, and OpenCode:
 
 ```bash
-npx skills add yorun-ai/vine-skill
+npx --yes skills@1.5.23 add yorun-ai/vine-skill --global --agent codex claude-code opencode --skill vine-skill --yes
 ```
 
-Start a new Codex task so the installed Skill is discovered, then invoke it explicitly as `$vine-skill`, for example:
+Remove `--global` for a project-scoped installation, or pass only one value after `--agent` to install for one host. Invoke the installed skill with the syntax supported by that host:
 
-```text
-Use $vine-skill to create a Vine service.
-```
+| Host | Example |
+| --- | --- |
+| Codex | `Use $vine-skill to create a Vine service.` |
+| Claude Code | `/vine-skill Create a Vine service.` |
+| OpenCode | `Use the vine-skill skill to create a Vine service.` |
+
+See [agent-hosts.md](./references/agent-hosts.md) for official discovery paths, permissions, troubleshooting, and the compatibility smoke-test contract.
 
 ## Version safety
 

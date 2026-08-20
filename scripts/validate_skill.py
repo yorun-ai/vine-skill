@@ -23,6 +23,7 @@ REQUIRED_FILES = (
     "references/execution-and-boundaries.md",
     "references/foundations.md",
     "references/frontend-vrpc.md",
+    "references/agent-hosts.md",
     "references/official-sources.md",
     "references/runtime-operations.md",
     "references/example-greeting/README.md",
@@ -62,6 +63,29 @@ REQUIRED_DELIVERY_TEXT = {
         "pathPrefix: /",
     ),
     "README.zh-CN.md": ("src/server/", "src/web/", "服务端完成后询问"),
+    "README.md": (
+        "Codex",
+        "Claude Code",
+        "OpenCode",
+        "skills@1.5.23",
+        "references/agent-hosts.md",
+    ),
+    "references/agent-hosts.md": (
+        ".agents/skills/vine-skill/SKILL.md",
+        ".claude/skills/vine-skill/SKILL.md",
+        ".opencode/skills/vine-skill/SKILL.md",
+        "--agent codex claude-code opencode",
+        "https://learn.chatgpt.com/docs/build-skills",
+        "https://code.claude.com/docs/en/skills",
+        "https://opencode.ai/docs/skills/",
+    ),
+    ".github/workflows/ci.yml": (
+        "skills@1.5.23",
+        "--agent codex claude-code opencode",
+        ".agents/skills/vine-skill/SKILL.md",
+        ".claude/skills/vine-skill/SKILL.md",
+        "references/agent-hosts.md",
+    ),
     "references/example-greeting/README.md": (
         "auth_service_test.go",
         "Required delivery check",
@@ -97,6 +121,7 @@ MIRRORED_MARKDOWN = (
     "references/execution-and-boundaries.md",
     "references/foundations.md",
     "references/frontend-vrpc.md",
+    "references/agent-hosts.md",
     "references/official-sources.md",
     "references/runtime-operations.md",
     "references/example-greeting/README.md",
@@ -115,7 +140,23 @@ STALE_MARKDOWN_TEXT = (
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
 FENCED_CODE_PATTERN = re.compile(r"^(```|~~~).*?^\1\s*$", re.MULTILINE | re.DOTALL)
 INLINE_CODE_PATTERN = re.compile(r"`[^`\n]*`")
-AGENT_FIELD_PATTERN = re.compile(r'^  ([a-z_]+):\s*["\']?(.*?)["\']?\s*$', re.MULTILINE)
+OPENAI_INTERFACE_FIELD_PATTERN = re.compile(
+    r'^  ([a-z_]+):\s*["\']?(.*?)["\']?\s*$', re.MULTILINE
+)
+HOST_SPECIFIC_CORE_TEXT = (
+    "Codex",
+    "Claude Code",
+    "OpenCode",
+    "ChatGPT",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".agents/skills",
+    ".claude/skills",
+    ".opencode/skills",
+    "$vine-skill",
+    "/vine-skill",
+    "openai.yaml",
+)
 
 
 def fail(message: str) -> None:
@@ -150,21 +191,32 @@ def validate_skill_frontmatter(root: Path = ROOT) -> None:
 
     if set(metadata) != {"name", "description"}:
         fail("SKILL.md frontmatter must contain only name and description")
-    if metadata["name"] != "vine-skill":
+    name = metadata["name"]
+    description = metadata["description"]
+    if name != "vine-skill":
         fail("SKILL.md name must be vine-skill")
-    if not metadata["description"]:
-        fail("SKILL.md description must not be empty")
+    if len(name) > 64 or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
+        fail("SKILL.md name must satisfy the portable Agent Skills naming contract")
+    if not 1 <= len(description) <= 1024:
+        fail("SKILL.md description must contain 1-1024 characters")
 
 
-def validate_agent_metadata(root: Path = ROOT) -> None:
+def validate_openai_metadata(root: Path = ROOT) -> None:
     text = (root / "agents/openai.yaml").read_text(encoding="utf-8")
-    fields = dict(AGENT_FIELD_PATTERN.findall(text))
+    fields = dict(OPENAI_INTERFACE_FIELD_PATTERN.findall(text))
     required = {"display_name", "short_description", "default_prompt"}
     missing = sorted(required - fields.keys())
     if missing:
         fail(f"agents/openai.yaml is missing fields: {', '.join(missing)}")
     if "$vine-skill" not in fields["default_prompt"]:
         fail("agents/openai.yaml default_prompt must invoke $vine-skill")
+
+
+def validate_host_neutral_core(root: Path = ROOT) -> None:
+    text = (root / "SKILL.md").read_text(encoding="utf-8")
+    found = [snippet for snippet in HOST_SPECIFIC_CORE_TEXT if snippet in text]
+    if found:
+        fail("SKILL.md contains host-specific text: " + ", ".join(found))
 
 
 def validate_local_markdown_links(root: Path = ROOT) -> None:
@@ -275,7 +327,8 @@ def validate_paired_chinese_tree() -> None:
         return
 
     validate_skill_frontmatter(paired_zh_root)
-    validate_agent_metadata(paired_zh_root)
+    validate_openai_metadata(paired_zh_root)
+    validate_host_neutral_core(paired_zh_root)
     validate_local_markdown_links(paired_zh_root)
     validate_no_stale_markdown(paired_zh_root)
 
@@ -309,7 +362,8 @@ def validate_paired_chinese_tree() -> None:
 def main() -> None:
     validate_required_files()
     validate_skill_frontmatter()
-    validate_agent_metadata()
+    validate_openai_metadata()
+    validate_host_neutral_core()
     validate_local_markdown_links()
     validate_browser_delivery_contract()
     validate_no_stale_markdown()

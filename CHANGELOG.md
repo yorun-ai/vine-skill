@@ -6,6 +6,12 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-20
+
+### Added
+
+- Added a host-compatibility reference and a pinned multi-host install path for Codex, Claude Code, and OpenCode
+
 ### Changed
 
 - Updated the tested baseline to Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6` while retaining Vine's released Go `1.26.5` module floor
@@ -13,6 +19,8 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Documented Vine `v0.13.1` and skelc `v0.12.0+` typed in-process Rpc cloning, the compatibility fallback for older generated specs, and the distinction between value-isolation and wire tests
 - Refreshed the official Vine, skelc, and website source revisions and updated example/CI pins
 - Replaced the manual Codex Skill clone instructions with `npx skills add yorun-ai/vine-skill`
+- Made the core `SKILL.md` agent-host neutral while retaining `agents/openai.yaml` as the optional Codex and ChatGPT presentation adapter
+- Extended package validation to enforce the portable core boundary and the three-host discovery contract
 
 ## [0.2.0] - 2026-08-07
 
