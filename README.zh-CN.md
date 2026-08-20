@@ -9,9 +9,19 @@
 [![skelc](https://img.shields.io/badge/skelc-v0.14.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-这是一个具备版本意识的 Codex Skill，用于开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务。新项目默认先交付服务端，只有明确确认后才追加前端。
+这是一个具备版本意识的 Agent Skill，可通过 Codex、Claude Code 或 OpenCode 开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务。新项目默认先交付服务端，只有明确确认后才追加前端。
 
 本仓库的实测工具链基线为 Vine `v0.13.1`、skelc `v0.14.0` 和 Go `1.26.6` 或更高版本；Vine `v0.13.1` 自身的 Go module 下限仍为 `1.26.5`。目标项目自身固定的版本始终优先。
+
+## 支持的 Agent Host
+
+本包以开放 Agent Skills 的 `SKILL.md` 契约作为工作流唯一事实来源。Host 专属的发现方式、调用语法、权限和可选展示元数据不进入核心工作流。
+
+| Host | 项目级 Skill 目录 | 显式调用 |
+| --- | --- | --- |
+| Codex | `.agents/skills/vine-skill/` | `$vine-skill` |
+| Claude Code | `.claude/skills/vine-skill/` | `/vine-skill` |
+| OpenCode | `.opencode/skills/vine-skill/`、`.claude/skills/vine-skill/` 或 `.agents/skills/vine-skill/` | 要求 OpenCode 使用 `vine-skill` |
 
 ## 核心行为
 
@@ -22,6 +32,7 @@
 - execution-scoped context、client、DAO、cache 和 locker 不得逃逸出所属 execution。
 - 根据 standalone、linked 或 separated 运行拓扑判断验证证据是否充分。
 - 仅要求诊断或评审时保持只读，只有请求授权实现时才修改代码。
+- 只使用当前 agent host 提供的能力；必需工具或权限不可用时，明确报告缺失证据。
 - 新项目默认按标准骨架先只交付服务端：契约在根级 `skel/`、生成物在 `skeled/`，Hub seed 与手写代码在 `src/server/`，确认前不创建 `src/web/`。
 - 服务端完成后询问是否需要前端，只有确认需要时才追加 `src/web/`。
 
@@ -68,8 +79,9 @@ demo/
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SKILL.md
-├── agents/openai.yaml
+├── agents/openai.yaml          # Codex/ChatGPT 适配元数据
 ├── references/
+│   └── agent-hosts.md          # host 兼容详情
 ├── scripts/
 └── .github/workflows/ci.yml
 ```
@@ -78,21 +90,25 @@ demo/
 
 `scripts/` 包含可选的 Linux Bash 与 Windows Command Prompt 原生启动模板，只有用户确认需要前端后才复制到项目中。
 
-## 安装
+## 安装方式
 
-安装前请确保本机已有 [Node.js](https://nodejs.org/) 和 OpenAI Codex。
+安装前请确保固定版本安装器所需的 [Node.js](https://nodejs.org/) `>=22.20.0`，并至少安装了一个受支持的 agent host。
 
-使用 npx 安装 Skill：
+为 Codex、Claude Code 和 OpenCode 全局安装 `vine-skill`：
 
 ```bash
-npx skills add yorun-ai/vine-skill
+npx --yes skills@1.5.23 add yorun-ai/vine-skill --global --agent codex claude-code opencode --skill vine-skill --yes
 ```
 
-新建一个 Codex 任务，让 Codex 发现刚安装的 Skill，然后通过 `$vine-skill` 显式调用，例如：
+项目级安装时移除 `--global`；只安装一个 host 时，仅在 `--agent` 后传一个值。按 host 支持的语法调用已安装 Skill：
 
-```text
-使用 $vine-skill 创建一个 Vine 服务。
-```
+| Host | 示例 |
+| --- | --- |
+| Codex | `使用 $vine-skill 创建一个 Vine 服务。` |
+| Claude Code | `/vine-skill 创建一个 Vine 服务。` |
+| OpenCode | `使用 vine-skill Skill 创建一个 Vine 服务。` |
+
+官方发现目录、权限、故障排查和兼容性冒烟测试契约见 [agent-hosts.md](./references/agent-hosts.md)。
 
 ## 版本安全
 

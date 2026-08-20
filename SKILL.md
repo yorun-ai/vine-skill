@@ -1,6 +1,6 @@
 ---
 name: vine-skill
-description: Develop, troubleshoot, review, test, upgrade, or deploy Yorun Vine services. For new projects, put hand-maintained contracts and generated code in the root-level skel/ and skeled/ directories, the Hub seed and hand-written server in src/server/, and the browser frontend in src/web/. Create src/web/ only after the server is complete and the user has requested or explicitly confirmed a browser frontend. Changes that touch Vine capability contracts, generated boundaries, capability registration, or Vine/skelc versions require a pinned-version Skel check and generation first; implementation-only changes that do not touch those boundaries must first confirm the existing generation baseline and validate against the impact. Use for projects importing go.yorun.ai/vine and for work involving ApplicationSpec, Component, Module, DI, lifecycle, Skel-generated Rpc/Web/Event/Task/config contracts, app/standalone, app/linked, Hub, Link, Portal, Vine CLI, infra/redis, infra/rdb, compatibility, and production readiness.
+description: Develop, troubleshoot, review, test, upgrade, or deploy Yorun Vine services. Use for Go projects importing go.yorun.ai/vine and work involving Vine apps, components, modules, DI, lifecycle, Skel-generated Rpc/Web/Event/Task/config contracts, Hub, Link, Portal, data infrastructure, compatibility, or production readiness. Enforces pinned Go/Vine/skelc baselines, generation before implementation for contract or capability changes, generated-boundary preservation for implementation-only changes, and server-first delivery with an optional user-confirmed browser frontend.
 ---
 
 # Develop Vine Applications
@@ -72,7 +72,7 @@ Do not create JSON REST Web routes for CRUD, queries, search, pagination, authen
 
 Before modifying anything, complete these checks:
 
-1. Read `AGENTS.md`, `README`, and contribution instructions in the project root and relevant subdirectories.
+1. Read every applicable repository-level and directory-level instruction supplied by the active agent host, then read the project README and contribution guidance.
 2. Inspect the worktree and protect the user's existing changes.
 3. Locate every `go.mod`, `.skel` file, generated directory, App specification, process entry point, and deployment configuration.
    For a new project, create the [standard skeleton](references/foundations.md#new-project-standard-structure) first, then write contracts or implementation.
@@ -110,6 +110,7 @@ Read only the references needed for the current task. Combine them for cross-dom
 | Redis, RDB, logging, redaction, and testkit | [data-and-testing.md](references/data-and-testing.md) |
 | Lifecycle, routing, topology, Hub, Link, Portal, CLI, security, rollout, and failure drills | [runtime-operations.md](references/runtime-operations.md) |
 | Finding the exact website pages, source, release notes, or refreshing version facts | [official-sources.md](references/official-sources.md) |
+| Installing, discovering, invoking, or troubleshooting this skill in an agent host | [agent-hosts.md](references/agent-hosts.md) |
 | A copyable template for a pure-server App (single entity + sqlite + actor auth): `.skel` file rules, repo/impl/app, testkit, and seed | [example-greeting](references/example-greeting/README.md) |
 
 ## Map the Complete Change Path
