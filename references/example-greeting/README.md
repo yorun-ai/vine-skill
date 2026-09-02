@@ -4,7 +4,7 @@ This directory is a **verified, compilable, testable** hello-world Vine **server
 a single `Greeting` entity persisted in sqlite, with **actor-authentication wiring** (login
 issues a session token, the Actor Auth Service validates it, and the welcome method consumes
 an authenticated actor). It demonstrates the wiring steps for implementing a minimal server
-with vine-skill (Go 1.26.6 / Vine v0.13.1 / skelc v0.14.0,
+with vine-skill (Go 1.26.6 / Vine v0.13.2 / skelc v0.14.0,
 Rpc + actor auth + config + sqlite).
 
 **Positioning: a pure server template.** This is a server development framework; the template
@@ -71,16 +71,16 @@ Event/Task, no frontend.
   itself writes `noauth`.
 
 ### 2. Generation and implementation
-- Generate Go for this baseline: `skelc gen go --skel-in ./skel --go-out ./skeled/golang --go-vine-version v0.13.1`. For another target project, replace the version with its reviewed pin.
+- Generate Go for this baseline: `skelc gen go --skel-in ./skel --go-out ./skeled/golang --go-vine-version v0.13.2`. For another target project, replace the version with its reviewed pin.
 - Initialize and connect the two Go modules from the project root:
 
 ```bash
 (cd skeled/golang && go mod init example.com/greeting/skeled/golang)
-(cd skeled/golang && go get go.yorun.ai/vine@v0.13.1 && go mod tidy)
+(cd skeled/golang && go get go.yorun.ai/vine@v0.13.2 && go mod tidy)
 (cd src/server && go mod init example.com/greeting/src/server)
 (cd src/server && go mod edit -require=example.com/greeting/skeled/golang@v0.0.0)
 (cd src/server && go mod edit -replace=example.com/greeting/skeled/golang=../../skeled/golang)
-(cd src/server && go get go.yorun.ai/vine@v0.13.1 github.com/google/uuid@v1.6.0)
+(cd src/server && go get go.yorun.ai/vine@v0.13.2 github.com/google/uuid@v1.6.0)
 (cd src/server && go mod tidy)
 ```
 

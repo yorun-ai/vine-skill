@@ -95,7 +95,7 @@ Run only commands already available locally. Do not install or upgrade tools mer
 6. Report the version and topology baseline. Do not treat the website's current examples as the project's API automatically.
 7. When using the Standalone Dashboard, check whether another process owns the target host/port, and explicitly set a project-specific `DashboardURL`. Do not rely on the default `:7099`, and do not reuse a browser origin that has served another Vine revision.
 
-See [foundations.md](references/foundations.md) for detailed baseline checks; the `v0.13.1` default timeouts, ports, and liveness timings are collected in [Version baseline quick reference](references/foundations.md#version-baseline-quick-reference).
+See [foundations.md](references/foundations.md) for detailed baseline checks; the `v0.13.2` default timeouts, ports, and liveness timings are collected in [Version baseline quick reference](references/foundations.md#version-baseline-quick-reference).
 
 ## Load References by Problem
 
@@ -125,13 +125,13 @@ Mark only the nodes that are actually affected. Do not mechanically run every va
 
 ## Implement Changes
 
-The following implementation rules come from the Vine `v0.13.1` source and the website's `next` documentation as researched on 2026-08-18. When the target project uses a different version, first verify construction timing, hook/panic behavior, configuration, retries, locks, and transport behavior at the pinned revision. When they differ, defer to the target revision's public source, GoDoc, tests, and release notes.
+The following implementation rules come from the Vine `v0.13.2` source and release notes, plus the website's `next` documentation as researched on 2026-08-18. When the target project uses a different version, first verify construction timing, hook/panic behavior, configuration, retries, locks, and transport behavior at the pinned revision. When they differ, defer to the target revision's public source, GoDoc, tests, and release notes.
 
 ### Use Generated Boundaries
 
 - For tasks covered by the generation gate, complete the checks, generation, and diff review above before writing implementation that depends on the new boundary.
 - Use the generated clients, default Servers, Listeners, Runners, emitters, launchers, and configuration types. Do not hand-write parallel DTOs, interfaces, or protocol adapters.
-- With Vine `v0.13.1`, skelc `v0.12.0` or later generates typed in-process request/result clone hooks. Older generated specs use Vine's serialization fallback. Preserve generated `MethodSpec` ownership and test value isolation; use a real Rpc transport when validating JSON/CBOR behavior.
+- With Vine `v0.13.2`, skelc `v0.12.0` or later generates typed in-process request/result clone hooks. Older generated specs use Vine's serialization fallback. The clone boundary guarantees caller/handler value isolation, not JSON/CBOR encoding, normalization, custom marshaling, or codec-failure equivalence. Preserve generated `MethodSpec` ownership and use a real Rpc transport when validating wire behavior.
 
 Do not import `go.yorun.ai/vine/internal/*` or copy internal transport, registry, or executor implementations. Ordinary applications should use only `app`, `core/*`, `infra/*`, `util/*`, and the generated facades.
 

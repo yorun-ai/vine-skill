@@ -1,6 +1,6 @@
 # Vine Runtime, Deployment, and Production Boundaries
 
-This reference is based on Vine `v0.13.1`. Use it for topology, routing, readiness, Hub/Link/Portal, CLI, mTLS, durability, rollout, and failure-drill tasks. CLI flags, default ports, and time constants may change by version. Verify them first with the target binary's supported `vine version` and `vine <command> --help`; do not assume that `version` accepts `--json`. The liveness timings, ports, and drain durations here are `v0.13.1` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
+This reference is based on Vine `v0.13.2`. Use it for topology, routing, readiness, Hub/Link/Portal, CLI, mTLS, durability, rollout, and failure-drill tasks. CLI flags, default ports, and time constants may change by version. Verify them first with the target binary's supported `vine version` and `vine <command> --help`; do not assume that `version` accepts `--json`. The liveness timings, ports, and drain durations here are `v0.13.2` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
@@ -89,7 +89,7 @@ Routing selection:
 - Failure of the selected endpoint returns from the current call. Retry explicitly only when idempotency and deadline allow it.
 - For Web, Portal selects a target Link from distributed endpoints, while that Link's webproxy indexes only local Apps.
 
-Network-mode liveness facts in `v0.13.1`:
+Network-mode liveness facts in `v0.13.2`:
 
 | Behavior | Current value |
 | --- | --- |
@@ -100,7 +100,9 @@ Network-mode liveness facts in `v0.13.1`:
 | Console ping timeout | 2 seconds |
 | Unregistration threshold | 3 consecutive non-timeout failures |
 
-Invocation timeout only logs and does not increment health failures; a stuck App may still have its lease renewed by Link. These are `v0.13.1` implementation constants (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list), not CLI tuning contracts.
+Invocation timeout only logs and does not increment health failures; a stuck App may still have its lease renewed by Link. These are `v0.13.2` implementation constants (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list), not CLI tuning contracts.
+
+In `v0.13.2`, Portal public entries set a 10-second `ReadHeaderTimeout`, a 2-minute `IdleTimeout`, and `MaxHeaderBytes` of 128 KiB. Global `ReadTimeout` and `WriteTimeout` remain unset so long-lived streaming Web traffic keeps its traffic-aware behavior. Custom public gateways and reverse proxies should preserve equivalent limits.
 
 Standalone disables TTL, heartbeat, sweeper, and App health checks. Linked retains Hub leases and heartbeats but skips App health checks because App and Link share a process.
 
@@ -125,7 +127,7 @@ Wrapper order:
 
 Operational shutdown order for separated mode: stop new external traffic → Apps → corresponding Links → Portal → Hub.
 
-Drain and stop timings in `v0.13.1` are implementation details (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference)): Link propagation grace is about 400 ms, in-flight Rpc/Event/Task drains for at most 30 seconds, App unregister RPC waits at most 1 minute, and App HTTP shutdown is about 10 seconds. Do not treat these values as stable CLI contracts. Orchestrator termination grace must cover the target version's actual boundaries.
+Drain and stop timings in `v0.13.2` are implementation details (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference)): Link propagation grace is about 400 ms, in-flight Rpc/Event/Task drains for at most 30 seconds, App unregister RPC waits at most 1 minute, and App HTTP shutdown is about 10 seconds. Do not treat these values as stable CLI contracts. Orchestrator termination grace must cover the target version's actual boundaries.
 
 ## CLI Baseline
 
@@ -139,7 +141,7 @@ vine link --help
 vine portal --help
 ```
 
-Local `v0.13.1` example:
+Local `v0.13.2` example:
 
 ```bash
 vine dev \
@@ -165,7 +167,7 @@ Hub must select exactly one database mode, SQLite or PostgreSQL, and exactly one
 
 Important current listeners:
 
-| Boundary | `v0.13.1` default/common value | Caller |
+| Boundary | `v0.13.2` default/common value | Caller |
 | --- | --- | --- |
 | Hub Control | `127.0.0.1:7071` | Link, Portal |
 | Hub Redis | `127.0.0.1:7072` | Link, Portal |
