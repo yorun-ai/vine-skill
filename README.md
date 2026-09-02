@@ -4,14 +4,14 @@
 
 [License](./LICENSE) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
-[![Vine](https://img.shields.io/badge/Vine-v0.13.1-f97316)](https://github.com/yorun-ai/vine/tree/v0.13.1)
+[![Vine](https://img.shields.io/badge/Vine-v0.13.2-f97316)](https://github.com/yorun-ai/vine/tree/v0.13.2)
 [![Go](https://img.shields.io/badge/Go-%3E%3D1.26.6-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
 [![skelc](https://img.shields.io/badge/skelc-v0.14.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
 A version-aware Agent Skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services with Codex, Claude Code, or OpenCode. New projects are delivered server-first; a frontend is added only after explicit confirmation.
 
-The tested toolchain baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.1` itself retains a Go `1.26.5` module floor. A target project's pinned versions always take precedence.
+The tested toolchain baseline is Vine `v0.13.2`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.2` requires Go `1.26.6`. A target project's pinned versions always take precedence.
 
 ## Supported agent hosts
 

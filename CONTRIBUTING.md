@@ -39,7 +39,7 @@ Generated Vine applications used for manual validation are disposable fixtures, 
 
 ## Updating version facts
 
-The current tested toolchain baseline is Vine `v0.13.1`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.1` itself retains a Go `1.26.5` module floor. A version update must include:
+The current tested toolchain baseline is Vine `v0.13.2`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.2` requires Go `1.26.6`. A version update must include:
 
 - primary-source evidence from the matching release, source revision, GoDoc, tests, or release notes;
 - synchronized version claims across `SKILL.md`, relevant references, and both repository READMEs;
@@ -78,7 +78,7 @@ read-only task, and capability-denial behavior. Record the client and installer 
 validation alone does not prove end-to-end host behavior.
 
 CI regenerates `references/example-greeting` with skelc `v0.14.0`, builds and tests it against
-Vine `v0.13.1`, runs `go vet`, rejects unformatted Go, and exercises the Windows launcher
+Vine `v0.13.2`, runs `go vet`, rejects unformatted Go, and exercises the Windows launcher
 `--check` path with a disposable fixture. It also installs the package into a disposable project
 for Codex, Claude Code, and OpenCode and verifies both shared and Claude-specific skill copies.
 

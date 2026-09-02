@@ -4,7 +4,12 @@ All notable changes to the vine-skill package are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.2]
+
+### Changed
+
+- Updated the tested baseline to Vine `v0.13.2`, skelc `v0.14.0`, and Go `1.26.6`.
+- Documented Vine `v0.13.2` Rpc value-isolation semantics, Portal public-entry streaming guardrails, and refreshed the example generation pins and official source revision.
 
 ## [0.2.1] - 2026-08-20
 
