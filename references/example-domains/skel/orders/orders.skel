@@ -1,0 +1,43 @@
+domain shop.orders
+
+pub actor BrowserActor {}
+
+pub data Order {
+    id: uuid
+    product: catalog.Product
+    quantity: int
+    confirmed: bool
+    confirmation: string
+}
+
+@desc("Backend contract used by the catalog's event consumer")
+pub service OrderService {
+    method getOrder {
+        input { orderId: uuid }
+        output Order
+    }
+}
+
+pub event OrderPlacedEvent {
+    payload {
+        eventId: uuid
+        orderId: uuid
+    }
+}
+
+api service OrderApiService {
+    for BrowserActor
+    auth anonymous
+
+    method placeOrder {
+        input {
+            sku: string
+            quantity: int
+        }
+        output Order
+    }
+    method getOrder {
+        input { orderId: uuid }
+        output Order
+    }
+}

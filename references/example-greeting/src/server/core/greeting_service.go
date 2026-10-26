@@ -9,15 +9,23 @@ import (
 )
 
 type GreetingService struct {
-	Repo   GreetingRepository     `inject:""`
-	Config *skeled.GreetingConfig `inject:""`
+	Repo   GreetingRepository                 `inject:""`
+	Config *skeled.GreetingConfig             `inject:""`
+	Events skeled.GreetingCreatedEventEmitter `inject:""`
 }
 
 func (s *GreetingService) Create(message string) skeled.Greeting {
 	if message == "" {
 		ex.PanicNew(ex.ValidationFailed, "message must not be empty")
 	}
-	return s.Repo.Create(skeled.Greeting{Message: message})
+	greeting := s.Repo.Create(skeled.Greeting{Message: message})
+	// One creation event per greeting: the persisted ID also identifies retries.
+	// Use a transactional outbox when publishing must recover from process failure.
+	s.Events.EmitGreetingCreated(&skeled.GreetingCreatedEvent{
+		EventId:  greeting.Id,
+		Greeting: greeting,
+	})
+	return greeting
 }
 
 func (s *GreetingService) List(pageToken *string, pageSize *int) skeled.GreetingPage {

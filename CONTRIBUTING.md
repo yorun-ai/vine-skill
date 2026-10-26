@@ -80,7 +80,7 @@ Claude Code, and OpenCode. Confirm discovery, explicit invocation, linked-refere
 read-only task, and capability-denial behavior. Record the client and installer versions, static
 format checks and observed host behavior as separate validation results.
 
-The example validation script works in a temporary directory, checks the actual module graph, compiles the frontend reference snippets, and exercises generated TypeScript clients and the real Hub Admin listener. CI regenerates `references/example-greeting` with skelc `v0.34.0`, builds and tests it against
+The example validation script works in a temporary directory, checks the actual module graph, compiles the frontend reference snippets, and exercises generated TypeScript clients and the real Hub Admin listener. It also generates `references/example-domains` with separate public/regular Go modules and tests bidirectional Rpc and Event delivery between two bundled Apps, including race checks. CI regenerates `references/example-greeting` with skelc `v0.34.0`, builds and tests it against
 Vine `v0.32.5`, runs `go vet`, rejects unformatted Go, and exercises the Windows launcher
 `--check` path with a disposable fixture. It also installs the package into a disposable project
 for Codex, Claude Code, and OpenCode and verifies both shared and Claude-specific skill copies.

@@ -15,4 +15,5 @@ func (*MainDatabase) InitOption(option *rdb.Option) {
 
 func (*MainDatabase) InitDao(add rdb.TypeAdder) {
 	add(rdb.T[*repo.GreetingDao]())
+	add(rdb.T[*repo.GreetingReceiptDao]())
 }

@@ -36,6 +36,10 @@ Shared workflow:
 
 ## Rpc
 
+For two domains consuming each other's generated Clients and Event Listeners, follow
+[Orders and Catalog](example-domains/README.md). It includes public/regular package generation,
+an imported DTO, separate App registrations and a tested request/Event round trip.
+
 Separate `pub service ...Service` backend contracts from `api service ...ApiService` external contracts. API services are reached through Portal. Backend generation emits their Servers; use `--api` for external Go/TypeScript clients. Actor audiences and permission admission belong to API/Web contracts. Share business logic through DI when both entry points need it.
 
 API services and Web contracts declare explicit `auth required`, `optional` or `anonymous`; Web alone also supports `off`. Methods inherit the service policy unless explicitly overridden. Use `for ClientActor` or a comma-separated actor list to select the audience.
@@ -120,6 +124,10 @@ Rules:
 For the same-origin `:7288` RPCGW + WEBGW Standalone pattern, startup, production assets, and `webgw endpoint is unavailable` diagnosis, use [frontend-vrpc.md](frontend-vrpc.md#publish-a-local-standalone-browser-app-on-port-7288).
 
 ## Event and Task
+
+For a runnable contract → generated emitter → Listener → generated launcher → Runner flow,
+see [Greeting's asynchronous receipts](example-greeting/README.md#event-to-task-receipts).
+The example includes App registration, SQLite deduplication, a result-query API and real delivery/retry tests.
 
 ### Consumer Semantics
 

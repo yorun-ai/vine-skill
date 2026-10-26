@@ -1,6 +1,8 @@
 package impl
 
 import (
+	skeltype "go.yorun.ai/skel/types"
+
 	skeled "example.com/greeting/skeled/golang"
 	"example.com/greeting/src/server/core"
 )
@@ -10,7 +12,8 @@ import (
 // recovered by the framework into structured error responses.
 type GreetingService struct {
 	skeled.DefaultGreetingApiServiceServer
-	Service *core.GreetingService `inject:""`
+	Service  *core.GreetingService          `inject:""`
+	Receipts core.GreetingReceiptRepository `inject:""`
 }
 
 func (h *GreetingService) CreateGreeting(message string) skeled.Greeting {
@@ -19,4 +22,8 @@ func (h *GreetingService) CreateGreeting(message string) skeled.Greeting {
 
 func (h *GreetingService) ListGreetings(pageToken *string, pageSize *int) skeled.GreetingPage {
 	return h.Service.List(pageToken, pageSize)
+}
+
+func (h *GreetingService) GetGreetingReceipt(greetingId skeltype.UUID) *skeled.GreetingReceipt {
+	return h.Receipts.Find(greetingId)
 }

@@ -32,4 +32,11 @@ api service GreetingApiService {
         }
         output GreetingPage
     }
+    @desc("Read the asynchronous receipt; null means it is not available yet")
+    method getGreetingReceipt {
+        input {
+            greetingId: uuid
+        }
+        output GreetingReceipt?
+    }
 }

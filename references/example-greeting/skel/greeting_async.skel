@@ -1,0 +1,27 @@
+domain greeting
+
+@desc("A greeting has been persisted")
+pub event GreetingCreatedEvent {
+    payload {
+        eventId: uuid
+        greeting: Greeting
+    }
+}
+
+@desc("Prepare a durable receipt for a greeting")
+task GreetingReceiptTask {
+    trigger prepare {
+        input {
+            jobId: uuid
+            greeting: Greeting
+        }
+    }
+}
+
+@desc("Receipt produced asynchronously, with a stable job ID for deduplication")
+pub data GreetingReceipt {
+    jobId: uuid
+    greetingId: uuid
+    message: string
+    preparedAt: timestamp
+}

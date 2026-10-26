@@ -1,0 +1,4 @@
+@desc("Orders that consume the catalog's public product contract")
+domain shop.orders
+
+import shop.catalog as catalog
