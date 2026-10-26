@@ -4,7 +4,23 @@ All notable changes to the vine-skill package are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
-## [0.2.2]
+## [0.3.0] - 2026-10-26
+
+### Added
+
+- Added a baseline-upgrade guide covering contract changes, selected Go dependencies, and staged migration of persistent Hub databases.
+- Added disposable validation for the published dependency graph, generated Go and TypeScript API clients, real Portal authentication and CRUD, direct Hub Admin calls, and executable Web proxy/assets examples.
+- Added a shared baseline manifest for CI toolchain selection and repository maintenance guidance.
+
+### Changed
+
+- Updated the tested baseline to Vine `v0.32.5`, skelc `v0.34.0`, and Go `1.27.3`, with a Go module floor of `1.27.0`. External clients use vRPC Go `v0.15.1` and vRPC TypeScript `0.10.0`.
+- Migrated the Greeting example to API service contracts, explicit authentication modes, current Actor audiences, standard-library UUIDs, and current Standalone options and Hub seed fields.
+- Refreshed configuration, lifecycle, runtime cloning, Redis lock release, Hub persistence, Dashboard access, Web serving, timeout, and deployment guidance against released sources.
+- Condensed the core Skill and expressed guidance as direct responsibilities, actions, and conditions across references, host metadata, launcher help, and both repository READMEs.
+- Integrated the published-baseline runtime checks into CI alongside portable skill installation and Linux/Windows launcher preflight.
+
+## [0.2.2] - 2026-09-02
 
 ### Changed
 
@@ -73,3 +89,6 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Explicit read-only behavior for diagnosis and review requests
 - Guidance for sensitive-field redaction, execution scope, internal endpoint exposure,
   authentication, TLS, Redis leases, and database migration boundaries
+
+[0.3.0]: https://github.com/yorun-ai/vine-skill/compare/v0.2.2...v0.3.0
+[0.2.2]: https://github.com/yorun-ai/vine-skill/releases/tag/v0.2.2
