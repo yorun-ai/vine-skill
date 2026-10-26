@@ -36,6 +36,7 @@ REQUIRED_FILES = (
     "scripts/baseline.json",
     "scripts/validate_example.py",
     "scripts/validate_example.sh",
+    "scripts/validate_hosts.py",
     "scripts/smoke_clients.cjs",
     "scripts/frontend_proxy_test.go.txt",
     "scripts/frontend_assets_test.go.txt",

@@ -9,7 +9,7 @@
 [![skelc](https://img.shields.io/badge/skelc-v0.34.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-A version-aware Agent Skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services with Codex, Claude Code, or OpenCode. New projects are delivered server-first; a frontend is added only after explicit confirmation.
+A version-aware Agent Skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services with Codex, Claude Code, OpenCode, Cursor, GitHub Copilot, Gemini CLI, DSH, Cline, or Qwen Code. New projects are delivered server-first; a frontend is added only after explicit confirmation.
 
 The tested toolchain baseline is Vine `v0.32.5`, skelc `v0.34.0`, and Go `1.27.3`; the Go module floor is `1.27.0`. External clients are tested with vRPC Go `v0.15.1` and vRPC TS `0.10.0`. A target project's pinned versions always take precedence.
 
@@ -24,6 +24,14 @@ The package uses the open Agent Skills `SKILL.md` contract as its single source 
 | Codex | `.agents/skills/vine-skill/` | `$vine-skill` |
 | Claude Code | `.claude/skills/vine-skill/` | `/vine-skill` |
 | OpenCode | `.opencode/skills/vine-skill/`, `.claude/skills/vine-skill/`, or `.agents/skills/vine-skill/` | Ask OpenCode to use `vine-skill` |
+| Cursor | `.agents/skills/vine-skill/` or `.cursor/skills/vine-skill/` | Select `/vine-skill` in Agent chat |
+| GitHub Copilot (CLI / VS Code) | `.agents/skills/vine-skill/` or `.github/skills/vine-skill/` | `/vine-skill` |
+| Gemini CLI | `.agents/skills/vine-skill/` or `.gemini/skills/vine-skill/` | Ask Gemini to use `vine-skill` |
+| DSH (DeepSeek Harness) | `.dsh/skills/vine-skill/` or `.agents/skills/vine-skill/` | Ask DSH to use `vine-skill` |
+| Cline | `.agents/skills/vine-skill/` or `.cline/skills/vine-skill/` | `/vine-skill` or ask Cline to use it |
+| Qwen Code | `.qwen/skills/vine-skill/` or `.agents/skills/vine-skill/` | `/vine-skill` |
+
+Compatibility is based on official discovery contracts and package installation checks. Client-session behavior has separate coverage; see the [validation record](./references/agent-hosts.md#validation-coverage). DSH requires its filesystem skill provider, and Cline's shared-directory support is confirmed in `v4.1.26` source.
 
 ## Core behavior
 
@@ -100,19 +108,36 @@ The default server skeleton uses `src/server/` as the server Go module root and 
 
 Prerequisites: [Node.js](https://nodejs.org/) `>=22.20.0` for the pinned installer and at least one supported agent host.
 
-Install `vine-skill` globally for Codex, Claude Code, and OpenCode:
+Install `vine-skill` globally for the eight hosts recognized by the pinned installer:
 
 ```bash
-npx --yes skills@1.5.23 add yorun-ai/vine-skill --global --agent codex claude-code opencode --skill vine-skill --yes
+npx --yes skills@1.5.23 add yorun-ai/vine-skill --global \
+  --agent codex claude-code opencode cursor github-copilot gemini-cli cline qwen-code \
+  --skill vine-skill --yes --copy
 ```
 
-Remove `--global` for a project-scoped installation, or pass only one value after `--agent` to install for one host. Invoke the installed skill with the syntax supported by that host:
+Remove `--global` for a project-scoped installation, or pass only one value after `--agent` to install for one host. `--copy` places complete bundles at the installer's host paths; rerun the command to update them.
+
+For DSH, install into a new user skill directory with Git (Bash example):
+
+```bash
+git clone --depth 1 https://github.com/yorun-ai/vine-skill.git \
+  "${DSH_HOME:-$HOME/.dsh}/skills/vine-skill"
+```
+
+For a project installation, use `.dsh/skills/vine-skill` as the destination. DSH also discovers an existing shared `.agents/skills/vine-skill` installation when its filesystem provider uses the default roots. Full-directory installation preserves the linked references and scripts. Invoke the installed skill with the syntax supported by that host:
 
 | Host | Example |
 | --- | --- |
 | Codex | `Use $vine-skill to create a Vine service.` |
 | Claude Code | `/vine-skill Create a Vine service.` |
 | OpenCode | `Use the vine-skill skill to create a Vine service.` |
+| Cursor | `/vine-skill Create a Vine service.` |
+| GitHub Copilot | `/vine-skill Create a Vine service.` |
+| Gemini CLI | `Use the vine-skill skill to create a Vine service.` |
+| DSH | `Use the vine-skill skill to create a Vine service.` |
+| Cline | `/vine-skill Create a Vine service.` |
+| Qwen Code | `/vine-skill Create a Vine service.` |
 
 See [agent-hosts.md](./references/agent-hosts.md) for official discovery paths, permissions, troubleshooting, and the compatibility smoke-test contract.
 
