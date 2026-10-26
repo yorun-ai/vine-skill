@@ -32,10 +32,21 @@ async function main() {
   assert.ok(page.items.some(item => item.id === created.id));
   await assert.rejects(greetings.createGreeting({ message: '' }), error => error.code === 'VALIDATION_FAILED');
 
+  const deadline = Date.now() + 10_000;
+  let receipt;
+  while (!(receipt = await greetings.getGreetingReceipt({ greetingId: created.id }))) {
+    assert.ok(Date.now() < deadline, 'Event/Task receipt did not become available');
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  assert.equal(receipt.jobId, created.id);
+  assert.equal(receipt.greetingId, created.id);
+  assert.equal(receipt.message, `Greeting received: ${created.message}`);
+  assert.ok(receipt.preparedAt);
+
   // This validation fixture checks the direct Hub Admin listener at the wire boundary.
   const adminClient = createVrpcClient({ prefixUrl: `${admin}/api/invoke`, clientInfo, traceMode: 'direct' });
   const readOnly = await adminClient.invoke({ serviceName: 'vine.hub.admin.AdminApiService', methodName: 'readOnly', params: null });
   assert.equal(readOnly, false);
-  console.log('Generated TypeScript: login, Actor admission, CRUD/errors; direct Hub Admin: passed.');
+  console.log('Generated TypeScript: login, Actor admission, CRUD/errors, Event/Task receipt; direct Hub Admin: passed.');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -73,6 +73,8 @@ skelc gen go-module --api --actor demo.ClientActor \
 
 Use the actual full actor name. Preserve existing generation entrypoints and output ownership. Imported domains need `--skel-import domain=PATH` plus the corresponding `--go-import`/`--ts-import` mapping for generated consumers. `schema get` resolves imports by default. Choose resolved inspection with import mappings, or `--shallow` inspection with opaque imported references.
 
+For public/regular Go package splitting and cross-domain calls, use [Orders and Catalog](example-domains/README.md#contracts-and-generation). A `pub service` exports its Client and a `pub event` exports its Listener; the owning regular package supplies the Server and Emitter. Generate both sides together with `--go-pub-out` and keep each generator's output directory separate.
+
 `go-module` owns generated module metadata as well as Go source. `gen go` is the non-module variant. Keep hand-written code outside generated directories. New output registers `descriptor.Domain` and imports scalars from `go.yorun.ai/skel/types`. Use standard-library `uuid` when constructing `skeltype.UUID`; wire JSON remains a UUID string.
 
 ### Backend Services and APIs
@@ -80,7 +82,7 @@ Use the actual full actor name. Preserve existing generation entrypoints and out
 - `pub service OrderService`: Clients and Servers for trusted backend Rpc; actor audiences and admission belong to API/Web contracts.
 - `api service OrderApiService`: external API Servers; generate separate Go/TS API clients with `--api`.
 - API declarations require an explicit authentication mode and actor audience. Select actors with `for ClientActor`.
-- `ext` contracts extend supported public contracts. Declare public API exposure explicitly with an API contract.
+- `ext service` exports a Server for another domain to implement; `ext event` exports an Emitter for another domain to publish. Declare Portal API exposure explicitly with an API contract.
 - Name Services after an entity or use case. An App can register several handlers sharing a business implementation.
 
 ## New-Project Standard Structure

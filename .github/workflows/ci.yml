@@ -72,7 +72,8 @@ jobs:
         run: |
           bash -n scripts/start_vine_app.sh
           bash -n scripts/validate_example.sh
-          test -z "$(gofmt -l references/example-greeting/src/server scripts/frontend_assets_test.go.txt scripts/frontend_proxy_test.go.txt)"
+          bash -n references/example-domains/generate.sh
+          test -z "$(gofmt -l references/example-greeting/src/server references/example-domains/src/server scripts/frontend_assets_test.go.txt scripts/frontend_proxy_test.go.txt)"
 
       - name: Run Linux launcher preflight
         run: |

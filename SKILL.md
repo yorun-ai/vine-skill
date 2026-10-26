@@ -29,7 +29,8 @@ Read only the references needed by the task:
 | Standalone/linked/separated, seed and deployment | [runtime-operations.md](references/runtime-operations.md) |
 | Requested browser UI, generated TS and Web serving | [frontend-vrpc.md](references/frontend-vrpc.md) |
 | Exact source and release evidence | [official-sources.md](references/official-sources.md) |
-| Starting a server implementation | [example-greeting](references/example-greeting/README.md) |
+| Starting a server implementation, including Event → Task delivery | [example-greeting](references/example-greeting/README.md) |
+| Cross-domain public contracts, two-App Rpc calls and Events | [example-domains](references/example-domains/README.md) |
 
 ## Apply the Generation Gate by Impact
 

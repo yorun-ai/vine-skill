@@ -11,9 +11,13 @@ import (
 type Migrator struct {
 	vineapp.BaseModule
 
-	GreetingDao *repo.GreetingDao `inject:""`
+	GreetingDao *repo.GreetingDao        `inject:""`
+	ReceiptDao  *repo.GreetingReceiptDao `inject:""`
 }
 
 func (m *Migrator) BeforeAppStart() error {
-	return m.GreetingDao.GormDB().AutoMigrate(&repo.GreetingRecord{})
+	if err := m.GreetingDao.GormDB().AutoMigrate(&repo.GreetingRecord{}); err != nil {
+		return err
+	}
+	return m.ReceiptDao.GormDB().AutoMigrate(&repo.GreetingReceiptRecord{})
 }

@@ -38,6 +38,10 @@ The package uses the open Agent Skills `SKILL.md` contract as its single source 
 - Create new projects server-first with the standard skeleton: contracts in root `skel/`, generated artifacts in `skeled/`, and Hub seed plus hand-written code under `src/server/`, with a requested browser frontend under `src/web/`.
 - Build a requested frontend after server validation. For a server-only request, deliver the server and ask whether a frontend is needed afterward.
 
+The [Greeting example](references/example-greeting/README.md#event-to-task-receipts) includes an Event → Task workflow with generated emitters/launchers, Listener/Runner registration, SQLite receipt deduplication, result lookup and delivery/retry tests.
+
+The [Orders and Catalog example](references/example-domains/README.md) demonstrates public contract generation/imports, Rpc calls in both directions and an Event round trip between two Apps.
+
 ## Generated server project layout
 
 New projects created by the Skill initially use this server-only skeleton. Project and service names are replaced with the real names:

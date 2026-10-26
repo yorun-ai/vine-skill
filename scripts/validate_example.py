@@ -128,6 +128,22 @@ def validate_server(work: Path) -> None:
         f"http://127.0.0.1:{business_port}", f"http://127.0.0.1:{admin_port}"])
 
 
+def validate_domains(work: Path) -> None:
+    fixture = work / "shop"
+    shutil.copytree(ROOT / "references/example-domains", fixture)
+    run("bash", "generate.sh", cwd=fixture)
+    server = fixture / "src/server"
+    selected = run("go", "list", "-m", "-f", "{{.Path}} {{.Version}}",
+                   "go.yorun.ai/vine", "go.yorun.ai/skel", "go.yorun.ai/vrpc", cwd=server, capture=True)
+    expected = {"go.yorun.ai/vine": BASELINE["vine"], "go.yorun.ai/skel": BASELINE["skelc"],
+                "go.yorun.ai/vrpc": BASELINE["vrpcGo"]}
+    if dict(line.split() for line in selected.splitlines()) != expected:
+        raise RuntimeError(f"unexpected two-domain dependency graph:\n{selected}")
+    print(selected, flush=True)
+    run("go", "test", "-race", "./...", cwd=server)
+    run("go", "vet", "./...", cwd=server)
+
+
 def validate_browser_reference(work: Path) -> None:
     fixture = work / "browser"
     (fixture / "skel").mkdir(parents=True)
@@ -170,8 +186,9 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix="vine-skill-validation-") as temporary:
         work = Path(temporary)
         validate_server(work)
+        validate_domains(work)
         validate_browser_reference(work)
-    print("Published baseline: Go tests/vet, API generation, TypeScript, Portal/Admin and Web references passed.")
+    print("Published baseline: Go tests/vet, Event/Task retries, two-domain Rpc/events/race, API generation, TypeScript, Portal/Admin and Web references passed.")
 
 
 if __name__ == "__main__":

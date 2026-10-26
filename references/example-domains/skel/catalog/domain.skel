@@ -1,0 +1,2 @@
+@desc("Product lookup and reservation notifications")
+domain shop.catalog

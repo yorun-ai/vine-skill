@@ -1,0 +1,23 @@
+domain shop.catalog
+
+pub data Product {
+    sku: string
+    title: string
+    unitPriceCents: int
+}
+
+pub service CatalogService {
+    method getProduct {
+        input { sku: string }
+        output Product
+    }
+}
+
+@desc("The catalog has recorded a reservation for an order")
+pub event ReservationCreatedEvent {
+    payload {
+        eventId: uuid
+        orderId: uuid
+        confirmation: string
+    }
+}

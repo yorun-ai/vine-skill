@@ -38,6 +38,10 @@
 - 新项目默认按标准骨架先交付服务端：契约在根级 `skel/`、生成物在 `skeled/`，Hub seed 与手写代码在 `src/server/`，用户要求的前端放在 `src/web/`。
 - 服务端验证完成后，实现用户要求的前端。对于纯服务端请求，先交付服务端，再询问是否需要前端。
 
+[Greeting 示例](references/example-greeting/README.md#event-to-task-receipts) 包含完整的 Event → Task 流程：生成的 emitter/launcher、Listener/Runner 注册、SQLite 回执去重、结果查询以及投递和重试测试。
+
+[订单与商品示例](references/example-domains/README.md) 演示公开契约的生成与导入、双向 Rpc 调用，以及两个 App 之间的事件往返。
+
 ## 生成服务端项目结构
 
 Skill 新建项目时先统一使用以下纯服务端骨架，项目名和服务名替换为真实名称：

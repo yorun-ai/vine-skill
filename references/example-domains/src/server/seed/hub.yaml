@@ -1,0 +1,20 @@
+portalEntries:
+  - name: shop-local
+    protocol: http
+    listenIPs: [127.0.0.1]
+    http:
+      host: ""
+      http: ENABLED
+      https: DISABLED
+      autohttps: DISABLED
+      httpPort: 7388
+portalSites:
+  - name: shop-rpc
+    type: RPCGW
+    actorSkelName: shop.orders.BrowserActor
+portalRules:
+  - name: shop-api
+    entryName: shop-local
+    matchPathPrefix: /api
+    routeType: SITE
+    routeSiteName: shop-rpc

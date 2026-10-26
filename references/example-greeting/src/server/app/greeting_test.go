@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json/v2"
 	"fmt"
 	"io"
@@ -46,7 +47,7 @@ func TestGreetingSuite(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Chdir(workdir)
-	testkit.StartStandalone[*GreetingApp](t, testkit.Option{SeedHubDataFile: seedPath})
+	testkit.StartStandalone[*greetingTestApp](t, testkit.Option{SeedHubDataFile: seedPath})
 	client := &http.Client{Timeout: 5 * time.Second}
 	endpoint := fmt.Sprintf("http://127.0.0.1:%d/api/invoke/", port)
 
@@ -138,6 +139,51 @@ func TestGreetingSuite(t *testing.T) {
 		status, code, _ = invoke("GreetingApiService", "createGreeting", map[string]any{"message": ""}, "")
 		if status != 422 || code != "VALIDATION_FAILED" {
 			t.Fatalf("wrong business error mapping: HTTP %d, %s", status, code)
+		}
+	})
+	t.Run("event to task receipt and retries", func(t *testing.T) {
+		status, code, response := invoke("GreetingApiService", "getGreetingReceipt",
+			map[string]any{"greetingId": "123e4567-e89b-12d3-a456-426614174099"}, "")
+		if status != 200 || code != "OK" || response["result"] != nil {
+			t.Fatalf("missing receipt should be null: HTTP %d, %s, %v", status, code, response)
+		}
+		status, code, response = invoke("GreetingApiService", "createGreeting", map[string]any{"message": retryMessage}, "")
+		if status != 200 || code != "OK" {
+			t.Fatalf("create failed: HTTP %d, %s", status, code)
+		}
+		id := response["result"].(map[string]any)["id"].(string)
+		deadline := time.Now().Add(20 * time.Second)
+		for {
+			status, code, response = invoke("GreetingApiService", "getGreetingReceipt", map[string]any{"greetingId": id}, "")
+			if status != 200 || code != "OK" {
+				t.Fatalf("receipt lookup failed: HTTP %d, %s", status, code)
+			}
+			counts := asyncDeliveries.snapshot(id)
+			// Two event attempts launch two tasks; the failed first task also retries.
+			if counts.Events >= 2 && counts.Tasks >= 3 && response["result"] != nil {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("async delivery did not recover: attempts=%+v, response=%v", counts, response)
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		receipt := response["result"].(map[string]any)
+		if receipt["jobId"] != id || receipt["greetingId"] != id || receipt["message"] != "Greeting received: "+retryMessage || receipt["preparedAt"] == nil {
+			t.Fatalf("incorrect receipt: %v", receipt)
+		}
+		// Inspect the durable side effect after the real Event and Task redeliveries.
+		db, err := sql.Open("sqlite", filepath.Join(workdir, "greeting.sqlite"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+		var count int
+		if err := db.QueryRow("SELECT COUNT(*) FROM greeting_receipt_records WHERE job_uuid = ?", id).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Fatalf("duplicate side effects: %d receipts", count)
 		}
 	})
 }
