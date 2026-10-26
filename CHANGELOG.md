@@ -4,6 +4,20 @@ All notable changes to the vine-skill package are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-10-27
+
+### Added
+
+- Added an Event → Task receipt workflow to the Greeting example, including generated Emitters and Launchers, Listener and Runner registration, SQLite deduplication, result lookup, and tests for Event redelivery and Task retries.
+- Added an Orders and Catalog example with public contract generation and imports, generated Rpc calls in both directions, and an Event round trip between two Apps in one Standalone process.
+- Added installation and invocation guidance for Cursor, GitHub Copilot (CLI / VS Code), Gemini CLI, DSH, Cline and Qwen Code, bringing the documented agent-host matrix to nine.
+
+### Changed
+
+- Clarified domain and App responsibilities, public contract ownership, and the relationship between schema imports and runtime call direction.
+- Extended CI to validate asynchronous receipts through generated TypeScript clients, cross-domain integration with race checks, and complete Skill installation for eight installer-supported hosts plus a native DSH directory copy.
+- Documented host discovery sources, installation paths and validation coverage, including pending client-session and user-profile installation tests.
+
 ## [0.3.0] - 2026-10-26
 
 ### Added
@@ -90,5 +104,6 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Guidance for sensitive-field redaction, execution scope, internal endpoint exposure,
   authentication, TLS, Redis leases, and database migration boundaries
 
+[0.4.0]: https://github.com/yorun-ai/vine-skill/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/yorun-ai/vine-skill/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/yorun-ai/vine-skill/releases/tag/v0.2.2
