@@ -7,8 +7,8 @@ import (
 
 func main() {
 	standalone.NewWithOption[*serverapp.GreetingApp](standalone.Option{
-		SQLiteFile:   "./greeting-hub.sqlite",
-		SeedYAMLFile: "./seed/hub.yaml",
-		DashboardURL: "http://127.0.0.1:7299/",
+		HubDBSQLiteFile: "./greeting-hub.sqlite",
+		HubSeedDataFile: "./seed/hub.yaml",
+		HubAdminListen:  "127.0.0.1:7299",
 	}).StartAndWait()
 }

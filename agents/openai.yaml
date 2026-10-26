@@ -1,4 +1,4 @@
 interface:
   display_name: "Vine Application Development"
-  short_description: "Build and validate the Vine server first; add the frontend only after confirmation"
-  default_prompt: "Use $vine-skill to build and validate the Vine server first with the standard skeleton (contracts in root skel/, generated artifacts in skeled/, Hub seed and hand-written code in src/server/); if the request did not include a frontend, ask after the server is complete and create the src/web/ browser frontend only after confirmation."
+  short_description: "Build Vine servers and requested browser frontends"
+  default_prompt: "Use $vine-skill to build and validate a Vine server with contracts in skel/, generated artifacts in skeled/, and hand-written code in src/server/, then add a requested browser frontend in src/web/."

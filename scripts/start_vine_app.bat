@@ -327,7 +327,7 @@ echo   http://127.0.0.1:5174/            Vite development upstream
 echo.
 echo Options:
 echo   --install  Run pnpm install before startup.
-echo   --check    Validate files, commands, dependencies, and ports without starting.
+echo   --check    Run preflight checks for files, commands, dependencies, and ports.
 echo   -h, --help Show this help.
 echo.
 echo Optional environment overrides:

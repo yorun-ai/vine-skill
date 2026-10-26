@@ -6,7 +6,7 @@ import (
 )
 
 type AuthService struct {
-	skeled.DefaultAuthServiceServer
+	skeled.DefaultAuthApiServiceServer
 	Service *core.AuthService `inject:""`
 }
 

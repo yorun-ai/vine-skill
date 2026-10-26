@@ -1,6 +1,6 @@
 # Vine Execution, Context, and Error Boundaries
 
-This reference is based on Vine `v0.13.2`. Use it for DI, execution, Filter, context, Actor, trace, timeout, and cross-boundary error tasks. Resolve exact symbols against public GoDoc for the target project's pinned version. The timeout values here are `v0.13.2` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
+This reference is based on Vine `v0.32.5`. Use it for DI, execution, Filter, context, Actor, trace, timeout, and cross-boundary error tasks. Resolve exact symbols against public GoDoc for the target project's pinned version. The timeout values here are `v0.32.5` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
@@ -16,9 +16,9 @@ This reference is based on Vine `v0.13.2`. Use it for DI, execution, Filter, con
 
 ### App-Lifecycle Singletons
 
-Components and Modules are each constructed once during `Start()` and retained until the App stops. They receive the application root `context.Context` and root `meta.Context`, not the context of a future request.
+Components and Modules are each constructed once during `Start()` and retained until the App stops. They receive the application root `context.Context` and root `meta.Context`.
 
-A generated Rpc client injected into a Module represents a background call initiated by the current App. It does not later become request-aware automatically. Do not retain execution objects obtained in Handlers or filters inside Modules, Components, global variables, caches, or background goroutines.
+A generated Rpc client injected into a Module represents a background call initiated by the current App. Its lifetime and metadata remain tied to the App root. Resolve request-aware objects within the Handler or Filter execution and release them with that execution.
 
 ### Execution Lifecycle
 
@@ -29,7 +29,7 @@ protocol entry → seed context/metadata → resolve filters → resolve handler
                → filters return outward → dispose execution-owned objects in reverse order
 ```
 
-Handlers, Listeners, Runners, and Filters are constructed inside the execution. The execution is complete after the Filter chain returns. Do not continue resolving dependencies or using canceled request objects afterward.
+Handlers, Listeners, Runners, and Filters are constructed inside the execution. The execution is complete after the Filter chain returns. Complete dependency resolution and request-object use before the execution ends.
 
 ## DI Binding and Scope
 
@@ -53,24 +53,24 @@ Critical fallback rules:
 
 | Binding | Plain/root injector | Execution injector |
 | --- | --- | --- |
-| No explicit scope | New transient on every resolution | One instance per execution |
+| Default scope | New transient on every resolution | One instance per execution |
 | `SingletonScope` | Root-container singleton | Reuse the root-container singleton |
-| `ExecutionScope` | Cannot resolve | One instance per execution |
+| `ExecutionScope` | Requires an execution injector | One instance per execution |
 | `TransientScope` | New instance on every resolution | New instance on every resolution |
 
-Scope attaches to the requested target type; it does not automatically propagate to the concrete implementation. When an interface and implementation must share the same instance, keep their scopes explicitly aligned or forward both to the same instance or factory.
+Scope attaches to the requested target type; the concrete implementation has its own binding and scope. When an interface and implementation must share the same instance, keep their scopes explicitly aligned or forward both to the same instance or factory.
 
 Rules:
 
-- Do not let a singleton depend on an explicitly execution-scoped type.
-- Keep context-aware clients, configuration, DAOs, caches, and lockers unscoped unless a stronger lifecycle requirement has been proven.
-- Do not make a request client or dynamic configuration reader a singleton merely to avoid construction. Doing so freezes the context or configuration from the first resolution.
+- Give singleton dependencies application-compatible lifetimes; resolve execution-scoped dependencies within an execution.
+- Use default scope for context-aware clients, configuration, DAOs, caches and lockers. Select an explicit scope when its lifecycle requirements are established.
+- Resolve request clients and dynamic configuration readers in the current execution so they capture its context and configuration.
 - `DIInit()` runs after field injection.
 - Execution-owned objects can be released in reverse order through `DIDispose()` or a disposer.
-- Seeded protocol objects are not owned by DI and are not disposed by DI.
-- A plain injector does not automatically close singletons. Close databases, Redis, files, queue connections, and goroutines through their owning Component or Module lifecycle.
+- The protocol entry owns and releases seeded protocol objects.
+- Close singleton databases, Redis, files, queue connections and goroutines through their owning Component or Module lifecycle.
 
-`BindCommon`, Component `Bind`, Module `Bind`, and capability `...Bind` methods may be applied to multiple containers. Make them declare bindings only; keep them deterministic, repeatable, and free of runtime side effects.
+`BindCommon`, Component `Bind`, Module `Bind`, and capability `...Bind` methods may be applied to multiple containers. Keep binding declarations deterministic and repeatable; perform I/O, resource startup and registration in lifecycle hooks.
 
 ## Execution and Filter
 
@@ -98,11 +98,11 @@ FilterA before
 FilterA after
 ```
 
-A Filter may read or rewrite the target, method, and arguments before invocation, and may rewrite results afterward. It cannot change the target, method, or arguments after target execution has completed.
+A Filter may read or rewrite the target, method and arguments before invocation. After invocation, it may inspect the completed call and rewrite results.
 
-Short-circuiting is not just omitting `next()`: Rpc, Event, and Task executors still require a valid result shape. A short-circuiting Filter must set results compatible with the target contract, or the execution fails because results are missing.
+A short-circuiting Filter completes Rpc, Event or Task execution by setting results compatible with the target contract. The executor validates that result shape.
 
-Use Filters for authentication, logging, metrics, and protocol adaptation shared across Handlers. Keep business state transitions in business services or Handlers so that Filters do not become hidden business workflows.
+Use Filters for authentication, logging, metrics, and protocol adaptation shared across Handlers. Keep business state transitions in business services or Handlers.
 
 ## Context, Trace, and Identity
 
@@ -116,41 +116,41 @@ Distinguish Actor states:
 
 | State | Meaning |
 | --- | --- |
-| absent | No identity was provided |
+| absent | Identity metadata is absent |
 | anonymous | A known unauthenticated external identity |
 | authenticated | Generated Actor info established by entry policy |
 
-Use `meta.GetActorInfo[T]` to read registered generated Actor info. Do not conflate absent and anonymous.
+Use `meta.GetActorInfo[T]` to read registered generated Actor info. Preserve the distinction between absent identity and an explicitly anonymous Actor.
 
 Trust boundaries:
 
 - Portal applies entry, authentication, and authorization policy to external requests, then writes backend Actor and Initiator metadata.
-- External callers cannot gain a trusted identity through self-supplied `vrpc-actor`, `vrpc-initiator`, `vweb-actor`, or `vweb-initiator` values.
-- Direct App and Link endpoints are internal boundaries and should not be exposed to external clients.
+- Portal derives trusted `vrpc-actor`, `vrpc-initiator`, `vweb-actor` and `vweb-initiator` values from admission policy and replaces caller-supplied values.
+- Restrict direct App and Link endpoint access to trusted internal callers.
 
-A trace ID is 32 lowercase hexadecimal characters and a span is 16; neither may be all zeros. When creating a child trace, preserve the trace ID, use the current span as the local parent, and generate a new span. `ParentSpan` is local information, not a complete OpenTelemetry span model.
+A trace ID is 32 lowercase hexadecimal characters and a span is 16; each must contain at least one nonzero digit. When creating a child trace, preserve the trace ID, use the current span as the local parent, and generate a new span. `ParentSpan` records the local parent span. Complete OpenTelemetry span modeling requires a separate tracing integration.
 
 A generated Rpc client injected into an inbound execution inherits trace, Actor, Initiator, and the remaining deadline. Background calls from a Module use the App root context, usually creating a new trace with an absent Actor.
 
-Never replace an active request context with `context.Background()`. Doing so loses cancellation, deadlines, and metadata lifecycle. Derive a child from the injected context when a local child is needed.
+Derive local child contexts from the injected request context to preserve cancellation, deadlines and metadata lifecycle.
 
-Event/Task propagates only trace, sender App, and publication time. It does not propagate Actor, Initiator, the sender's deadline, or cancellation. Put the minimum immutable identity needed for asynchronous authorization into the contract and have the receiver revalidate it. Do not copy credentials or secrets.
+Event/Task propagates trace, sender App and publication time. Each receiver starts with absent Actor/Initiator metadata and its own deadline and cancellation. Put the minimum immutable identity needed for asynchronous authorization into the contract and have the receiver revalidate it. Keep credentials and secrets in the owning authentication system.
 
 ## Timeout and Cancellation
 
-In `v0.13.2`:
+In `v0.32.5`:
 
-- Ordinary Rpc and Web have a default total timeout of 30 seconds.
-- Portal rejects request timeouts above 120 seconds.
+- Rpc defaults to 30 seconds; Portal rejects Rpc/MCP requested budgets above 120 seconds.
+- The ordinary Web fallback policy defaults to 30 seconds and accepts requests up to 120 seconds. A site `webTimeout.default` or most-specific `paths` rule selects the total budget; the request header may select a shorter budget, bounded by that policy. Paths match the decoded, rewritten backend path. Configured positive durations can exceed the legacy request maximum.
 - Budget begins at the Portal entry and includes admission, authentication, and checks. Each forward carries the remaining time.
 - A generated downstream client inherits the remaining deadline when it retains the injected context.
-- SSE/WebSocket has no total timeout when none is explicitly set, but uses a 60-second traffic-idle timeout.
+- With the default stream policy, SSE/WebSocket lasts for the connection lifetime subject to a 60-second traffic-idle limit. An explicit total budget adds a deadline. Portal owns SSE idle enforcement; internal Link/App streams preserve deadline, cancellation and truncation errors.
 
-These are `v0.13.2` version facts (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list). Check the corresponding documentation and source when the target version differs.
+These are `v0.32.5` version facts (see [Version baseline quick reference](foundations.md#version-baseline-quick-reference) for the full list). Check the corresponding documentation and source when the target version differs.
 
-A timeout cancels the context but cannot force Go code that ignores cancellation to stop. For Event/Task, an old attempt may continue after timeout and overlap a retry. Check context in long loops, before external I/O, and before irreversible side effects.
+A timeout cancels the context; the handler must observe cancellation to stop its work. For Event/Task, an old attempt may continue after timeout and overlap a retry. Check context in long loops, before external I/O, and before irreversible side effects.
 
-An ordinary external client disconnect does not necessarily cancel a backend execution already accepted by Portal. Do not treat a network disconnect as an automatic business transaction rollback signal.
+Ordinary Web, Rpc and MCP executions accepted by Portal continue after client disconnect, bounded by the gateway execution budget and shutdown. Streaming work with the default budget remains tied to its live connection. Transaction commit and rollback follow the application transaction policy.
 
 ## Structured Errors
 
@@ -168,24 +168,24 @@ err := ex.New(
 
 Rules:
 
-- Consumers should inspect `Code` and agreed `Reason` values, not parse messages or depend on concrete types.
-- `WithCause` supports in-process `errors.Is`, but the cause is not serialized.
-- An unregistered or invalid `Code` panics. Do not assemble unknown error codes by hand.
-- `Internal` and `Unknown` are suitable boundary fallbacks, not generic business errors.
+- Consumers classify errors by `Code` and agreed `Reason` values.
+- `WithCause` supports in-process `errors.Is`; cross-process classification uses serialized Code and Reason.
+- Use registered `Code` values; invalid or unregistered values raise a panic.
+- Use `Internal` and `Unknown` for boundary fallbacks and registered business Codes for expected business failures.
 - `Recover` catches any `ex.Error`. `RecoverApplication` catches only business errors and continues to panic for SystemError and non-Vine panics.
-- Portal preserves the external detail field shape but clears its contents. Do not rely on internal details leaking to clients.
+- Portal preserves the external detail field shape and clears its contents. Put client-facing classification in Code and Reason.
 
 Low-level Rpc clients panic on SystemError by default. Use `ReturnIfSystemError` or a generated ER client only when explicit error returns are truly required, and preserve the same error classification semantics.
 
 ## Review Checklist
 
-- [ ] No execution object escapes into a singleton, cache, or goroutine.
-- [ ] No active call chain is severed with `context.Background()`.
-- [ ] Bind methods perform no I/O, startup, registration, or non-repeatable side effects.
+- [ ] Execution objects are used and released within their owning execution.
+- [ ] Child calls derive from the injected context and preserve the active call chain.
+- [ ] Bind methods declare deterministic bindings; lifecycle hooks own I/O, startup and registration.
 - [ ] Filter short-circuits produce valid results, and argument/result rewrites match the contract.
 - [ ] Actor comes only from a trusted entry or an explicit internal execution.
 - [ ] Timeout and retry operations are idempotent and observe cancellation.
-- [ ] Errors use registered Codes, and public messages/details reveal no internal or sensitive information.
+- [ ] Errors use registered Codes, and public messages/details contain sanitized client-facing information.
 - [ ] Resources are released by their real owner through an execution disposer or App lifecycle.
 
 See [official-sources.md](official-sources.md) for official pages.

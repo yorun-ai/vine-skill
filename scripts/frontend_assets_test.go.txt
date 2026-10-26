@@ -1,0 +1,127 @@
+package frontend
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	skeled "example.com/console/skeled/golang"
+	"go.yorun.ai/vine/app"
+	"go.yorun.ai/vine/app/testkit"
+	"gopkg.in/yaml.v3"
+)
+
+type browserApp struct {
+	app.Application
+	app.WebberEnabled
+	app.ServicerEnabled
+}
+
+func (*browserApp) Name() string                           { return "console.test" }
+func (*browserApp) WebberInitHandlers(add app.TypeAdder)   { add(app.T[*ConsoleWeb]()) }
+func (*browserApp) ServicerInitHandlers(add app.TypeAdder) { add(app.T[*probe]()) }
+
+type probe struct {
+	skeled.DefaultProbeApiServiceServer
+}
+
+func (*probe) Ping() string { return "api matched" }
+
+func TestPortalAssetsAndAPIRouting(t *testing.T) {
+	raw, err := os.ReadFile("hub.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seed map[string]any
+	if err := yaml.Unmarshal(raw, &seed); err != nil {
+		t.Fatal(err)
+	}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+	seed["portalEntries"].([]any)[0].(map[string]any)["http"].(map[string]any)["httpPort"] = port
+	raw, err = yaml.Marshal(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedPath := filepath.Join(t.TempDir(), "hub.yaml")
+	if err := os.WriteFile(seedPath, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	testkit.StartStandalone[*browserApp](t, testkit.Option{SeedHubDataFile: seedPath})
+	client := &http.Client{Timeout: 5 * time.Second}
+	origin := fmt.Sprintf("http://127.0.0.1:%d", port)
+	request := func(method string, path string, accept string) (int, string) {
+		t.Helper()
+		req, err := http.NewRequest(method, origin+path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Accept", accept)
+		response, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return response.StatusCode, string(body)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		status, body := request("GET", "/", "text/html")
+		if status == 200 && strings.Contains(body, "Vine assets fixture") {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("WEBGW not ready: %d", status)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	for _, test := range []struct {
+		method string
+		path   string
+		accept string
+		status int
+	}{
+		{"GET", "/client/route", "text/html", 200},
+		{"GET", "/missing.js", "application/javascript", 404},
+		{"POST", "/", "text/html", 405},
+	} {
+		status, _ := request(test.method, test.path, test.accept)
+		if status != test.status {
+			t.Errorf("%s %s: got %d want %d", test.method, test.path, status, test.status)
+		}
+	}
+	req, err := http.NewRequest("POST", origin+"/api/invoke/example.console.ProbeApiService/ping", bytes.NewBufferString(`{"params":{}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Accept", "application/vrpc+json")
+	req.Header.Set("Content-Type", "application/vrpc+json")
+	req.Header.Set("Vrpc-Trace", "id=123e4567e89b12d3a456426614174000")
+	req.Header.Set("Vrpc-Client", "name=console.test,version=1.0.0,instanceId=123e4567-e89b-12d3-a456-426614174001")
+	response, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	body, _ := io.ReadAll(response.Body)
+	if response.StatusCode != 200 || response.Header.Get("Vrpc-Status") != "OK" || !bytes.Contains(body, []byte("api matched")) {
+		t.Fatalf("API did not win over asset root: %d", response.StatusCode)
+	}
+}

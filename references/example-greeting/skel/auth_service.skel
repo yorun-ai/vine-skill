@@ -4,17 +4,19 @@ domain greeting
 pub data LoginResult {
     success: bool
     username: string?
+    @sensitive
     token: string?
 }
 
-@desc("Auth service (login itself is noauth)")
-pub service AuthService {
-    for GreetingActor via client
-    noauth
+@desc("Auth service (login accepts anonymous callers)")
+api service AuthApiService {
+    for GreetingActor
+    auth optional
     @desc("Login with username and password; returns a session token")
     method login {
         input {
             username: string
+            @sensitive
             password: string
         }
         output LoginResult

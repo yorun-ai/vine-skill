@@ -1,125 +1,143 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json/v2"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"go.yorun.ai/vine/app/testkit"
-	"go.yorun.ai/vine/core/ex"
-	"go.yorun.ai/vine/core/meta"
-	"go.yorun.ai/vine/core/skel"
-
-	skeled "example.com/greeting/skeled/golang"
+	"gopkg.in/yaml.v3"
 )
 
-func startRuntime(t *testing.T) *testkit.Runtime {
-	t.Helper()
-	// Use the test-only seed (no portalSites/portalRules) so the standalone does
-	// not bind real portal ports (7288/7299). Tests stay independent of local
-	// port availability.
-	// The business RDB uses a fixed SQLite file path; remove any data left by
-	// earlier runs so each test package starts from a clean database.
-	_ = os.Remove("greeting.sqlite")
-	return testkit.StartStandalone[*GreetingApp](t, testkit.Option{
-		SeedYAMLFile: "../seed/test-hub.yaml",
-	})
-}
-
+// Exercise API services and admission through their real Portal boundary,
+// using the checked-in seed on an isolated loopback port.
 func TestGreetingSuite(t *testing.T) {
-	r := startRuntime(t)
-	execution := r.NewExecution(testkit.ExecutionOption{
-		Actor: meta.NewAnonymousActor(),
-	})
-	client := testkit.NewClient[skeled.GreetingServiceClient](execution)
-	auth := testkit.NewClient[skeled.AuthServiceClient](execution)
-	welcome := testkit.NewClient[skeled.WelcomeServiceClient](execution)
+	seed, err := os.ReadFile("../seed/hub.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]any
+	if err := yaml.Unmarshal(seed, &config); err != nil {
+		t.Fatal(err)
+	}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+	config["portalEntries"].([]any)[0].(map[string]any)["http"].(map[string]any)["httpPort"] = port
+	seed, err = yaml.Marshal(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workdir := t.TempDir()
+	seedPath := filepath.Join(workdir, "hub.yaml")
+	if err := os.WriteFile(seedPath, seed, 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(workdir)
+	testkit.StartStandalone[*GreetingApp](t, testkit.Option{SeedHubDataFile: seedPath})
+	client := &http.Client{Timeout: 5 * time.Second}
+	endpoint := fmt.Sprintf("http://127.0.0.1:%d/api/invoke/", port)
 
-	t.Run("login with default credentials", func(t *testing.T) {
-		result := auth.Login("admin", "admin123")
-		if !result.Success {
-			t.Fatalf("expected successful login with default credentials, got %+v", result)
+	invoke := func(service string, method string, params any, token string) (int, string, map[string]any) {
+		t.Helper()
+		body, err := json.Marshal(map[string]any{"params": params})
+		if err != nil {
+			t.Fatal(err)
 		}
-		if result.Username == nil || *result.Username != "admin" {
-			t.Fatalf("expected username admin, got %+v", result.Username)
+		req, err := http.NewRequest(http.MethodPost, endpoint+"greeting."+service+"/"+method, bytes.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
 		}
-		if result.Token == nil || *result.Token == "" {
-			t.Fatal("expected a session token on successful login")
+		req.Header.Set("Accept", "application/vrpc+json")
+		req.Header.Set("Content-Type", "application/vrpc+json")
+		req.Header.Set("Vrpc-Trace", "id=123e4567e89b12d3a456426614174000")
+		req.Header.Set("Vrpc-Client", "name=greeting.test,version=1.0.0,instanceId=123e4567-e89b-12d3-a456-426614174001")
+		if token != "" {
+			req.Header.Set("Authorization", "token "+token)
 		}
-	})
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		payload, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var envelope map[string]any
+		if err := json.Unmarshal(payload, &envelope); err != nil {
+			t.Fatalf("invalid vRPC response: %v", err)
+		}
+		return resp.StatusCode, resp.Header.Get("Vrpc-Status"), envelope
+	}
 
-	t.Run("login rejected on wrong password", func(t *testing.T) {
-		result := auth.Login("admin", "wrong")
-		if result.Success {
-			t.Fatalf("expected failed login for wrong password, got %+v", result)
+	var login map[string]any
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		status, code, envelope := invoke("AuthApiService", "login", map[string]any{"username": "admin", "password": "admin123"}, "")
+		if status == 200 && code == "OK" {
+			login = envelope["result"].(map[string]any)
+			break
 		}
-	})
+		if status != 503 || time.Now().After(deadline) {
+			t.Fatalf("Portal did not become ready: HTTP %d, %s", status, code)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	token, ok := login["token"].(string)
+	if !ok || token == "" {
+		t.Fatal("login did not issue a token")
+	}
 
-	t.Run("welcome requires an authenticated actor", func(t *testing.T) {
-		// An anonymous execution has no actor info, so the welcome method
-		// panics with Unauthorized (plain-style error handling).
-		defer func() {
-			r := recover()
-			if r == nil {
-				t.Fatal("expected a panic without authentication, got none")
+	t.Run("admission", func(t *testing.T) {
+		for _, supplied := range []string{"", "invalid-token"} {
+			status, code, _ := invoke("WelcomeApiService", "getWelcome", map[string]any{}, supplied)
+			if status != 401 || code != "UNAUTHORIZED" {
+				t.Fatalf("expected rejected credential: HTTP %d, %s", status, code)
 			}
-			err, ok := r.(ex.Error)
-			if !ok {
-				t.Fatalf("expected ex.Error panic, got %T: %v", r, r)
-			}
-			if err.Code() != ex.Unauthorized {
-				t.Fatalf("expected Unauthorized, got %s", err.Code())
-			}
-		}()
-		welcome.GetWelcome()
-	})
-
-	t.Run("welcome accepts actor info after admission", func(t *testing.T) {
-		// Core tests cover token validation. This test covers the post-admission
-		// path where Portal has already supplied authenticated actor info.
-		authed := r.NewExecution(testkit.ExecutionOption{
-			Actor: meta.NewAuthenticatedActor(&skeled.GreetingActorInfo{Username: "admin"}),
-		})
-		w := testkit.NewClient[skeled.WelcomeServiceClient](authed)
-		got := w.GetWelcome()
-		if got.Username != "admin" {
-			t.Fatalf("expected welcome for admin, got %+v", got)
 		}
-		if got.Message != "Welcome back, admin" {
-			t.Fatalf("unexpected welcome message %q", got.Message)
+		status, code, response := invoke("WelcomeApiService", "getWelcome", map[string]any{}, token)
+		if status != 200 || code != "OK" {
+			t.Fatalf("valid credential rejected: HTTP %d, %s", status, code)
+		}
+		if response["result"].(map[string]any)["username"] != "admin" {
+			t.Fatal("authenticated actor info was not propagated")
+		}
+		// optional admits omitted credentials and rejects invalid supplied credentials.
+		status, code, _ = invoke("AuthApiService", "login", map[string]any{"username": "admin", "password": "admin123"}, "invalid-token")
+		if status != 401 || code != "UNAUTHORIZED" {
+			t.Fatalf("optional auth accepted invalid credentials: HTTP %d, %s", status, code)
 		}
 	})
-
-	t.Run("create and list greeting", func(t *testing.T) {
-		created := client.CreateGreeting("hello from vine")
-		if created.Id == (skel.UUID{}) {
-			t.Fatal("expected a generated greeting id")
+	t.Run("persistence and business error", func(t *testing.T) {
+		status, code, response := invoke("GreetingApiService", "createGreeting", map[string]any{"message": "hello from vine"}, "")
+		if status != 200 || code != "OK" {
+			t.Fatalf("create failed: HTTP %d, %s", status, code)
 		}
-		if created.Message != "hello from vine" {
-			t.Fatalf("unexpected message %q", created.Message)
+		id := response["result"].(map[string]any)["id"]
+		status, code, response = invoke("GreetingApiService", "listGreetings", map[string]any{"pageToken": nil, "pageSize": nil}, "")
+		if status != 200 || code != "OK" {
+			t.Fatalf("list failed: HTTP %d, %s", status, code)
 		}
-
-		page := client.ListGreetings(nil, nil)
-		if len(page.Items) != 1 || page.Items[0].Id != created.Id {
-			t.Fatalf("expected 1 greeting, got %+v", page.Items)
+		items := response["result"].(map[string]any)["items"].([]any)
+		if len(items) != 1 || items[0].(map[string]any)["id"] != id {
+			t.Fatal("created greeting was not persisted")
 		}
-	})
-
-	t.Run("empty message rejected", func(t *testing.T) {
-		// Default (non-ER) style expresses business errors by panic; the plain
-		// client re-panics via ex.PanicIfError, so assert via recover.
-		defer func() {
-			r := recover()
-			if r == nil {
-				t.Fatal("expected a panic for empty message, got none")
-			}
-			err, ok := r.(ex.Error)
-			if !ok {
-				t.Fatalf("expected ex.Error panic, got %T: %v", r, r)
-			}
-			if err.Code() != ex.ValidationFailed {
-				t.Fatalf("expected ValidationFailed, got %s", err.Code())
-			}
-		}()
-		client.CreateGreeting("")
+		status, code, _ = invoke("GreetingApiService", "createGreeting", map[string]any{"message": ""}, "")
+		if status != 422 || code != "VALIDATION_FAILED" {
+			t.Fatalf("wrong business error mapping: HTTP %d, %s", status, code)
+		}
 	})
 }

@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"github.com/google/uuid"
+	"uuid"
 
-	"go.yorun.ai/vine/core/skel"
+	skeltype "go.yorun.ai/skel/types"
 	"go.yorun.ai/vine/infra/rdb"
 
 	skeled "example.com/greeting/skeled/golang"
@@ -19,9 +19,9 @@ type GreetingDao struct{ rdb.Dao[*GreetingRecord] }
 
 func (r *GreetingRecord) toSkeled() skeled.Greeting {
 	return skeled.Greeting{
-		Id:        skel.NewUUID(uuid.MustParse(r.UUID)),
+		Id:        skeltype.NewUUID(uuid.MustParse(r.UUID)),
 		Message:   r.Message,
-		CreatedAt: skel.NewTimestamp(r.CreatedAt),
+		CreatedAt: skeltype.NewTimestamp(r.CreatedAt),
 	}
 }
 
