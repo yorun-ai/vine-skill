@@ -33,7 +33,7 @@ Starts a browser-enabled Vine Standalone project:
 
 Options:
   --install  Run pnpm install before startup.
-  --check    Validate files, commands, dependencies, and ports without starting.
+  --check    Run preflight checks for files, commands, dependencies, and ports.
   -h, --help Show this help.
 
 Optional environment overrides:
@@ -41,8 +41,8 @@ Optional environment overrides:
   VINE_PREPARE_PACKAGE, VINE_HOST, VINE_VITE_PORT,
   VINE_PUBLIC_PORT, VINE_DASHBOARD_PORT, VINE_STARTUP_TIMEOUT
 
-Set VINE_PREPARE_PACKAGE=./cmd/migrate only when the target project explicitly
-requires that preparation step. The script never infers or runs migrations.
+Set VINE_PREPARE_PACKAGE=./cmd/migrate when the target project explicitly
+requires that preparation step; the launcher runs the configured package.
 EOF
 }
 
@@ -283,8 +283,8 @@ printf '[vine-start] vRPC: http://%s:%s/api/invoke\n' "$HOST" "$PUBLIC_PORT"
 printf '[vine-start] Dashboard: http://%s:%s/\n' "$HOST" "$DASHBOARD_PORT"
 printf '[vine-start] press Ctrl+C to stop both processes\n'
 
-# Wait for either child to exit, then stop the other. Uses polling instead of
-# `wait -n` so this works on macOS /bin/bash 3.2 as well as newer bash.
+# Wait for either child to exit, then stop the other. Polling supports both
+# macOS /bin/bash 3.2 and newer Bash versions.
 set +e
 STATUS=""
 while :; do

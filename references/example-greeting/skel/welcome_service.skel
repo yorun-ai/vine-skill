@@ -7,8 +7,9 @@ pub data Welcome {
 }
 
 @desc("Welcome service; requires an authenticated actor (session)")
-pub service WelcomeService {
-    for GreetingActor via client
+api service WelcomeApiService {
+    for GreetingActor
+    auth required
     @desc("Get welcome info; the actor is validated before this runs")
     method getWelcome {
         output Welcome

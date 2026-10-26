@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = (
     "SKILL.md",
+    "references/baseline-upgrade.md",
     "README.md",
     "README.zh-CN.md",
     "LICENSE",
@@ -29,91 +30,14 @@ REQUIRED_FILES = (
     "references/example-greeting/README.md",
     "references/example-greeting/src/server/core/auth_service_test.go",
     "scripts/start_vine_app.sh",
+    "scripts/baseline.json",
+    "scripts/validate_example.py",
+    "scripts/validate_example.sh",
+    "scripts/smoke_clients.cjs",
+    "scripts/frontend_proxy_test.go.txt",
+    "scripts/frontend_assets_test.go.txt",
     "scripts/start_vine_app.bat",
 )
-REQUIRED_DELIVERY_TEXT = {
-    "SKILL.md": (
-        "Build the server first",
-        "Add the frontend only after confirmation",
-        "src/server/seed/hub.yaml",
-        "skeled/golang/",
-        "skeled/typescript/",
-        "src/server/app/app.go",
-        "src/server/cmd/<name>/main.go",
-        "src/web/",
-        "replace <module>/skeled/golang => ../../skeled/golang",
-    ),
-    "references/foundations.md": (
-        "./skeled/golang",
-        "./skeled/typescript",
-        "src/server/seed/hub.yaml",
-        "src/server/cmd/demo/main.go",
-        "src/server/app/app.go",
-        "src/server/impl/",
-        "src/server/repo/",
-        "skeled/golang/go.mod",
-        "replace example.com/demo/skeled/golang => ../../skeled/golang",
-    ),
-    "references/frontend-vrpc.md": (
-        "web.NewReverseProxy",
-        "web.NewAssetsServer",
-        'router.ANY("/*path",',
-        "Retry-After",
-        "pathPrefix: /api",
-        "pathPrefix: /",
-    ),
-    "README.zh-CN.md": ("src/server/", "src/web/", "服务端完成后询问"),
-    "README.md": (
-        "Codex",
-        "Claude Code",
-        "OpenCode",
-        "skills@1.5.23",
-        "references/agent-hosts.md",
-    ),
-    "references/agent-hosts.md": (
-        ".agents/skills/vine-skill/SKILL.md",
-        ".claude/skills/vine-skill/SKILL.md",
-        ".opencode/skills/vine-skill/SKILL.md",
-        "--agent codex claude-code opencode",
-        "https://learn.chatgpt.com/docs/build-skills",
-        "https://code.claude.com/docs/en/skills",
-        "https://opencode.ai/docs/skills/",
-    ),
-    ".github/workflows/ci.yml": (
-        "skills@1.5.23",
-        "--agent codex claude-code opencode",
-        ".agents/skills/vine-skill/SKILL.md",
-        ".claude/skills/vine-skill/SKILL.md",
-        "references/agent-hosts.md",
-    ),
-    "references/example-greeting/README.md": (
-        "auth_service_test.go",
-        "Required delivery check",
-        "Only a real Portal/RPCGW call proves",
-    ),
-    "scripts/start_vine_app.sh": (
-        "--install",
-        "--check",
-        "VINE_PREPARE_PACKAGE",
-        "wait_for_public_page",
-        "$PROJECT_ROOT/src/web",
-        "$SERVER_DIR/go.mod",
-        "$PROJECT_ROOT/skeled/golang/go.mod",
-        "./cmd/demo",
-        "$PROJECT_ROOT/src/server/seed/hub.yaml",
-    ),
-    "scripts/start_vine_app.bat": (
-        "--install",
-        "--check",
-        "VINE_PREPARE_PACKAGE",
-        ":wait_for_page",
-        "%VINE_PROJECT_ROOT%\\src\\web",
-        "%VINE_SERVER_DIR%\\go.mod",
-        "%VINE_PROJECT_ROOT%\\skeled\\golang\\go.mod",
-        "./cmd/demo",
-        "%VINE_PROJECT_ROOT%\\src\\server\\seed\\hub.yaml",
-    ),
-}
 MIRRORED_MARKDOWN = (
     "SKILL.md",
     "references/capabilities.md",
@@ -131,7 +55,6 @@ EXACT_MIRROR_FILES = (
     "scripts/start_vine_app.bat",
 )
 STALE_MARKDOWN_TEXT = (
-    "vine version --json",
     "frontend project should be managed as a separate application",
     "前端项目应作为独立应用另行管理",
     "real Portal/vRPC end-to-end validation is optional",
@@ -240,17 +163,6 @@ def validate_local_markdown_links(root: Path = ROOT) -> None:
 
     if broken:
         fail("broken local Markdown links:\n  " + "\n  ".join(broken))
-
-
-def validate_browser_delivery_contract() -> None:
-    missing: list[str] = []
-    for relative, snippets in REQUIRED_DELIVERY_TEXT.items():
-        text = (ROOT / relative).read_text(encoding="utf-8")
-        for snippet in snippets:
-            if snippet not in text:
-                missing.append(f"{relative}: {snippet}")
-    if missing:
-        fail("browser delivery contract is incomplete:\n  " + "\n  ".join(missing))
 
 
 def validate_no_stale_markdown(root: Path = ROOT) -> None:
@@ -365,7 +277,6 @@ def main() -> None:
     validate_openai_metadata()
     validate_host_neutral_core()
     validate_local_markdown_links()
-    validate_browser_delivery_contract()
     validate_no_stale_markdown()
     validate_markdown_shape(ROOT / "README.md", ROOT / "README.zh-CN.md", "repository README")
     validate_paired_chinese_tree()

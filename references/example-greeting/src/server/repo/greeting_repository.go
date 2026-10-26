@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"github.com/google/uuid"
+	"uuid"
 
-	"go.yorun.ai/vine/core/skel"
+	skeltype "go.yorun.ai/skel/types"
 
 	skeled "example.com/greeting/skeled/golang"
 )
@@ -13,7 +13,7 @@ type GreetingRepositoryImpl struct {
 }
 
 func (r *GreetingRepositoryImpl) Create(g skeled.Greeting) skeled.Greeting {
-	g.Id = skel.NewUUID(uuid.New())
+	g.Id = skeltype.NewUUID(uuid.NewV7())
 	record := greetingRecordFromSkeled(g)
 	r.Dao.Create(record)
 	return record.toSkeled()

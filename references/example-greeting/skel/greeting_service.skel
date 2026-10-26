@@ -14,9 +14,9 @@ pub data GreetingPage {
 }
 
 @desc("Greeting service")
-pub service GreetingService {
-    for GreetingActor via client
-    noauth
+api service GreetingApiService {
+    for GreetingActor
+    auth optional
     @desc("Create a greeting")
     method createGreeting {
         input {

@@ -11,7 +11,7 @@ import (
 // execution context. It can only succeed when Portal delivered an
 // authenticated actor after validating the session token.
 type WelcomeService struct {
-	skeled.DefaultWelcomeServiceServer
+	skeled.DefaultWelcomeApiServiceServer
 
 	Context meta.Context         `inject:""`
 	Service *core.WelcomeService `inject:""`

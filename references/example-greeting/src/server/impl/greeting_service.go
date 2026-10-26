@@ -5,11 +5,11 @@ import (
 	"example.com/greeting/src/server/core"
 )
 
-// GreetingService adapts the generated Server. Default style (no ER): methods
-// return values only; business errors are expressed with ex.PanicNew in core and
+// GreetingService adapts the generated Server. Methods return business values;
+// core expresses business errors with ex.PanicNew, which are
 // recovered by the framework into structured error responses.
 type GreetingService struct {
-	skeled.DefaultGreetingServiceServer
+	skeled.DefaultGreetingApiServiceServer
 	Service *core.GreetingService `inject:""`
 }
 

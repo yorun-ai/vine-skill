@@ -1,0 +1,44 @@
+package frontend
+
+import (
+	"github.com/gin-gonic/gin"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
+	"testing"
+)
+
+func TestDevelopmentProxy(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.EscapedPath() != "/asset%20name" || r.URL.RawQuery != "v=1" {
+			t.Error("request path/query changed")
+		}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = io.WriteString(w, "asset")
+	}))
+	defer upstream.Close()
+	proxy := new(Proxy)
+	proxy.DIInit()
+	t.Cleanup(proxy.AfterAppStop)
+	target, _ := url.Parse(upstream.URL)
+	proxy.proxy.Director = httputil.NewSingleHostReverseProxy(target).Director
+	gin.SetMode(gin.TestMode)
+	invoke := func() *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(response)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/asset%20name?v=1", nil)
+		proxy.Serve(ctx)
+		return response
+	}
+	response := invoke()
+	if response.Code != http.StatusCreated || response.Body.String() != "asset" {
+		t.Fatal("proxy changed upstream status/body")
+	}
+	upstream.Close()
+	response = invoke()
+	if response.Code != http.StatusServiceUnavailable || response.Header().Get("Retry-After") != "1" {
+		t.Fatal("unavailable upstream did not use explicit 503 handler")
+	}
+}

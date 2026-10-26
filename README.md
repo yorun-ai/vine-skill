@@ -4,14 +4,16 @@
 
 [License](./LICENSE) · [Changelog](./CHANGELOG.md) · [Contributing](./CONTRIBUTING.md)
 
-[![Vine](https://img.shields.io/badge/Vine-v0.13.2-f97316)](https://github.com/yorun-ai/vine/tree/v0.13.2)
-[![Go](https://img.shields.io/badge/Go-%3E%3D1.26.6-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
-[![skelc](https://img.shields.io/badge/skelc-v0.14.0-0097a7)](https://skel.yorun.ai/docs/)
+[![Vine](https://img.shields.io/badge/Vine-v0.32.5-f97316)](https://github.com/yorun-ai/vine/tree/v0.32.5)
+[![Go](https://img.shields.io/badge/Go-1.27.3-00ADD8?logo=go&logoColor=white)](./references/foundations.md)
+[![skelc](https://img.shields.io/badge/skelc-v0.34.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
 A version-aware Agent Skill for developing, troubleshooting, reviewing, testing, upgrading, and deploying [Yorun Vine](https://github.com/yorun-ai/vine) services with Codex, Claude Code, or OpenCode. New projects are delivered server-first; a frontend is added only after explicit confirmation.
 
-The tested toolchain baseline is Vine `v0.13.2`, skelc `v0.14.0`, and Go `1.26.6` or later; Vine `v0.13.2` requires Go `1.26.6`. A target project's pinned versions always take precedence.
+The tested toolchain baseline is Vine `v0.32.5`, skelc `v0.34.0`, and Go `1.27.3`; the Go module floor is `1.27.0`. External clients are tested with vRPC Go `v0.15.1` and vRPC TS `0.10.0`. A target project's pinned versions always take precedence.
+
+For migration details and the dependency selection rationale, see [baseline-upgrade.md](./references/baseline-upgrade.md).
 
 ## Supported agent hosts
 
@@ -28,13 +30,13 @@ The package uses the open Agent Skills `SKILL.md` contract as its single source 
 - Determine the target project's pinned Go, Vine, and skelc versions before selecting APIs or commands.
 - Require pinned `skelc check`, generation, and generated-diff review for contract, capability-registration, generator, or version changes.
 - Preserve generated boundaries for implementation-only changes.
-- Use Rpc/vRPC for structured synchronous APIs and reserve Web/HTTP for binary streams and static assets.
-- Keep execution-scoped contexts, clients, DAOs, caches, and lockers inside their owning execution.
+- Use Rpc/vRPC for structured synchronous APIs and use Web/HTTP for binary streams, static assets, and required HTTP/streaming protocols.
+- Create, use and release contexts, clients, DAOs, caches and lockers within their owning execution.
 - Match validation evidence to standalone, linked, or separated runtime topology.
-- Diagnose read-only unless the request authorizes implementation.
+- Use read-only diagnosis and perform implementation when requested.
 - Use only capabilities exposed by the active agent host and report missing evidence when a required tool or permission is unavailable.
-- Create new projects server-first with the standard skeleton: contracts in root `skel/`, generated artifacts in `skeled/`, and Hub seed plus hand-written code under `src/server/`, with no `src/web/` until confirmed.
-- After the server is complete, ask whether a frontend is needed and create `src/web/` only after confirmation.
+- Create new projects server-first with the standard skeleton: contracts in root `skel/`, generated artifacts in `skeled/`, and Hub seed plus hand-written code under `src/server/`, with a requested browser frontend under `src/web/`.
+- Build a requested frontend after server validation. For a server-only request, deliver the server and ask whether a frontend is needed afterward.
 
 ## Generated server project layout
 
@@ -67,7 +69,7 @@ demo/
     └── web/          # created only after the user confirms the frontend
 ```
 
-The default server skeleton uses `src/server/` as the server Go module root and `skeled/golang/` as the generated-code module. `src/server/go.mod` requires the generated module at `v0.0.0` and replaces it with `../../skeled/golang`. The skeleton never creates root-level `go.mod`, `go.sum`, `app/`, `cmd/`, `core/`, `impl/`, `repo/`, `seed/`, or `web/`, and contains no `internal/`. Existing projects retain their established layout unless migration is explicitly requested.
+The default server skeleton uses `src/server/` as the server Go module root and `skeled/golang/` as the generated-code module. `src/server/go.mod` requires the generated module at `v0.0.0` and replaces it with `../../skeled/golang`. Each module owns its `go.mod` and `go.sum`; application code uses the responsibility directories shown above. Existing projects retain their established layout; layout migration follows an explicit request.
 
 ## Repository layout
 
@@ -88,7 +90,7 @@ The default server skeleton uses `src/server/` as the server Go module root and 
 
 `SKILL.md` contains the core workflow. Detailed and version-sensitive guidance lives under `references/` and is loaded only when relevant.
 
-The files under `scripts/` are optional Linux Bash and Windows Command Prompt launcher templates copied only after the user confirms a frontend.
+`scripts/` contains package validation tools and optional Linux Bash and Windows Command Prompt launchers. Copy only the launcher templates into projects with a confirmed frontend; package validation fixtures remain in this repository.
 
 ## Installation
 
@@ -112,7 +114,7 @@ See [agent-hosts.md](./references/agent-hosts.md) for official discovery paths, 
 
 ## Version safety
 
-The skill does not install or upgrade Vine, skelc, Go, or runtime infrastructure automatically. It derives target versions from evidence such as `go.mod`, `go.sum`, CI configuration, generation scripts, generated-file markers, and already-installed tool output.
+The skill derives target versions from `go.mod`, `go.sum`, CI configuration, generation scripts, generated-file markers, and installed tool output. Installing or upgrading Vine, skelc, Go, or runtime infrastructure requires a request covering that change.
 
 When the target revision differs from this repository's reference baseline, public source, GoDoc, tests, and release notes from the target revision take precedence. Source priorities are documented in [official-sources.md](./references/official-sources.md).
 

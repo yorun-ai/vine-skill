@@ -7,7 +7,7 @@ import (
 )
 
 // Migrator creates the business tables before the App serves traffic.
-// Vine RDB never migrates business tables automatically.
+// Alternatively, a DAO can implement EnsureSchema; its default hook is empty.
 type Migrator struct {
 	vineapp.BaseModule
 

@@ -1,10 +1,11 @@
 # Vine Redis, RDB, Logging, and Testing
 
-This reference is based on Vine `v0.13.2`. Use it for infrastructure Components, sensitive logging, and `app/testkit` tasks. Values such as the lock lease here are `v0.13.2` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
+This reference is based on Vine `v0.32.5`. Use it for infrastructure Components, sensitive logging, and `app/testkit` tasks. Values such as the lock lease here are `v0.32.5` version facts; the authoritative list is in [Version baseline quick reference](foundations.md#version-baseline-quick-reference).
 
 ## Contents
 
 - [Redis Component](#redis-component)
+- [Runtime-managed locks](#runtime-managed-locks)
 - [Redis locks and Cache](#redis-locks-and-cache)
 - [RDB Component](#rdb-component)
 - [Logging and redaction](#logging-and-redaction)
@@ -39,44 +40,36 @@ func (*DemoApp) InitComponents(add app.TypeAdder) {
 }
 ```
 
-Inject `*MainRedis` for ordinary go-redis commands, or inject dedicated Cache and Locker types. Vine factories capture the current execution context; do not cache these objects into a longer lifecycle.
+Inject `*MainRedis` for ordinary go-redis commands, or inject dedicated Cache and Locker types. Vine factories capture the current execution context; use and release these objects within that execution.
 
-By default, the full Go type derives the namespace. Override `KeyPrefix()` with the same value only when different types genuinely need to share one keyspace. `GetOrLoad` is not singleflight; high-concurrency misses require application-level stampede control.
+By default, the full Go type derives the namespace. Give different types the same `KeyPrefix()` when they intentionally share a keyspace. `GetOrLoad` runs a loader for each cache miss; concurrent misses require application-level stampede control.
+
+Memory Redis (`redis+memory://name[/dbIndex]`) is process-local and ephemeral. Each process owns independent data and locks for its memory URLs; cross-process coordination requires a shared backend. External components share pools by endpoint and reject `SELECT` to a different configured database; use distinct endpoints for distinct databases.
+
+## Runtime-Managed Locks
+
+`core/lock.Locker` scopes keys to an application; `core/lock.UniversalLocker` shares a namespace across applications using the same runtime backend. Hub defaults to embedded leases and network deployments can select Redis or disable locking. Choose this separately from an application-owned `infra/redis.Locker`. Verify the selected backend and its lease/cancellation contract. Establish fencing and durable ownership through an explicit coordination design when required.
 
 ## Redis Locks and Cache
 
-A lock is a coordination lease with a TTL and refresh, not a strongly consistent ownership token, and it has no fencing token.
+A lock is a coordination lease with a TTL and refresh. Strong ownership enforcement requires application-managed fencing at the protected resource.
 
 ```go
 lock, ok := service.Locker.Lock(userID)
-if !ok {
-    return
-}
-
-if !service.rebuildWhileOwned(lock.Context(), userID) {
-    return
-}
-
-// Ownership may still be lost after the work returns. Release through an
-// application-owned fail-fast or recovery boundary; do not treat IsBroken()
-// as proof that Unlock() is safe.
-service.releaseThroughAuditedBoundary(lock)
+if !ok { return }
+defer lock.TryUnlock()
+service.rebuildWhileOwned(lock.Context(), userID)
 ```
 
-The `releaseThroughAuditedBoundary` above represents a failure policy selected and tested by the application; it is not a Vine API. It may preserve `Unlock()` panic as fail-fast behavior, or catch, log, and convert it only at an explicit recovery boundary. Do not pretend inside business logic that release always succeeds.
+`TryUnlock()` checks local state atomically and attempts a token-checked Redis release. It returns false for an lock with an unacquired, broken, released or lost-ownership state; Redis command errors still panic under the infrastructure fail-fast policy. The caller must choose an appropriate error boundary.
 
-High-risk rules:
+- `Lock.Context()` is canceled on release, ownership loss, refresh failure, parent cancellation or conservative local lease expiry. Work must observe it.
+- `Unlock()` panics for broken/already-released locks. `IsBroken()` followed by `Unlock()` is a race; use `TryUnlock()` when release should tolerate lost ownership.
+- Implement fencing and rollback of side effects in the business coordination design when required.
 
-- `Lock.Context()` is canceled on unlock, ownership loss, refresh failure, parent cancellation, or local conservative lease expiry.
-- A broken lock no longer belongs to the caller, and `Unlock()` panics.
-- `IsBroken()` and the following `Unlock()` are not atomic; ownership can still be lost between them.
-- The current API has no `TryUnlock`.
-- Do not unconditionally `defer lock.Unlock()` when work may outlast the lease.
-- Stop critical-section work immediately after context cancellation. If the business cannot accept the fail-fast unlock contract, use an explicit recovery/error boundary or choose a lock system with the required semantics.
+In `v0.32.5`, the default lock lease is 30 seconds with refresh. Verify public APIs and source when the target version differs.
 
-In `v0.13.2`, the default lock lease is 30 seconds with refresh. Verify public APIs and source when the target version differs.
-
-Common Cache operations are `Get`, `GetOrLoad`, `Set`, and `Delete`. A cache is not the business source of truth. Test keys, TTLs, misses, deserialization errors, and concurrent loads from the source.
+Common Cache operations are `Get`, `GetOrLoad`, `Set`, and `Delete`. Keep authoritative business state in its owning data store and treat cached values as derived data. Test keys, TTLs, misses, deserialization errors, and concurrent loads from the source.
 
 ## RDB Component
 
@@ -108,13 +101,13 @@ Rules:
 
 - `sqlite://...` selects SQLite. Other supported URLs use PostgreSQL.
 - Components with the same `ConnURL` share the underlying `*gorm.DB`; the first opener determines pool settings.
-- A DAO captures the current context and logger through `gorm.DB.WithContext`. Do not retain DAOs across executions.
-- Common CRUD/query failures panic through the Vine error boundary instead of returning ordinary errors. Test the Code and status at the correct boundary.
-- Use the injected DAO's exposed GORM capabilities directly for complex transactions or queries. Do not force them into a simplified API.
-- `rdb.Model` includes `DeletedAt` and supports soft deletion. `rdb.DeletableModel` omits the soft-delete field and supports physical deletion.
-- `standalone.Option.SQLiteFile` stores Hub state and is entirely separate from the business RDB.
+- A DAO captures the current context and logger through `gorm.DB.WithContext`. Use each DAO within its owning execution.
+- Common CRUD/query failures panic through the Vine error boundary. Test the Code and status at the correct boundary.
+- Use the injected DAO's exposed GORM capabilities directly for complex transactions or queries.
+- `rdb.Model` includes `DeletedAt` and supports soft deletion; `rdb.DeletableModel` supports physical deletion. `UModel`/`UDeletableModel` use standard-library UUIDv7 primary keys. `Dao.Filter` provides set-based writes, `Dao.One` enforces exactly one affected row, and `Exists` checks for matching rows.
+- `standalone.Option.HubDBSQLiteFile` stores Hub state and is entirely separate from the business RDB.
 
-Vine only opens connections and constructs DAOs. It does not call `AutoMigrate` or create business tables. Treat reviewed migrations as a separate deployment step completed before the App serves traffic. Test upgrades, rollbacks, and rolling-version compatibility.
+Vine opens connections, constructs DAOs and calls each registered DAO's `EnsureSchema` before exposing DAOs. The default hook has an empty implementation; define table creation and `AutoMigrate` calls explicitly where needed. A concrete DAO may own a repeatable migration there, or the application can use a reviewed migration step. Treat reviewed migrations as a separate deployment step completed before the App serves traffic. Test upgrades, rollbacks, and rolling-version compatibility.
 
 ## Logging and Redaction
 
@@ -131,11 +124,11 @@ rpcLog.Info("request completed", "method", "GetUser")
 Sensitive data:
 
 - Use Skel `@sensitive` to generate a field tag or whole-type marker.
-- A field named `password` is not redacted automatically.
+- Mark password fields explicitly with `@sensitive`.
 - Dynamic maps or JSON require `redact.Option{RootSensitive: true}` or an explicit sanitizer.
-- Use `RevealSensitive` only for tightly controlled diagnosis. Binary values still do not emit raw bytes.
-- Framework Rpc/Event/Task payload logs always use bounded redaction and have no global disable switch.
-- Error logs must not include credentials, tokens, private keys, raw configuration, unsanitized payloads, or underlying error text that may contain sensitive data.
+- Use `RevealSensitive` for tightly controlled diagnosis. Binary values retain their summarized representation.
+- Framework Rpc/Event/Task payload logs always apply bounded redaction.
+- Log sanitized error codes and diagnostic fields. Redact credentials, tokens, private keys, configuration and payloads, and sanitize underlying error text before logging.
 
 Use `t.Cleanup` to restore global state when testing process-wide logger rules.
 
@@ -147,16 +140,16 @@ func TestGreeting(t *testing.T) {
     execution := runtime.NewExecution(testkit.ExecutionOption{
         Actor: meta.NewAnonymousActor(),
     })
-    client := testkit.NewClient[skeled.GreetingServiceClient](execution)
+    client := execution.NewClient[skeled.GreetingServiceClient]()
 
     got := client.Hello("Vine")
     require.Equal(t, "Hello, Vine", got.Message)
 }
 ```
 
-Use configuration overrides to construct strict test data. Use the corresponding ER client when an explicit SystemError is needed.
+This testkit client path is for backend `pub service` contracts. For API services, generate an external client and call real Portal, or test the business service directly. The server example uses real Portal integration tests. Use `testkit.Option.SeedHubDataFile` or configuration overrides to construct strict test data. Use the corresponding ER client when an explicit SystemError is needed.
 
-Start only one standalone runtime per test process/package. Share the runtime across test groups and organize cases as subtests. App spec types and names are process singletons; repeated startup is not an isolation strategy. Do not run tests that share registries, loggers, App singletons, or in-process endpoints in parallel unless isolation has been proven.
+Start only one standalone runtime per test process/package. Share the runtime across test groups and organize cases as subtests. App spec types and names are process singletons. Run tests sharing registries, loggers, App singletons or in-process endpoints sequentially; use proven isolation for parallel tests.
 
 Use `t.Cleanup` to restore:
 
@@ -167,12 +160,12 @@ Use `t.Cleanup` to restore:
 
 Test observable behavior: return values, persisted state, error codes, configuration overrides, timeouts, cancellation, duplicate delivery, graceful stop, and sensitive logs.
 
-Standalone/testkit can validate wiring, DI, serialization, registration, and business routing semantics, but cannot prove:
+Standalone/testkit validates wiring, DI, in-process isolation, registration and business behavior. A deliberately configured real Portal listener can also prove local admission, as the example does. Use an actual network topology and dedicated checks to validate:
 
 - Heartbeat, leases, or sweepers.
 - Process crashes or network partitions.
 - DNS, firewalls, or real listeners.
-- mTLS, certificates, or Portal external entry.
+- mTLS, certificates and actual Portal admission.
 - Separate Link/NATS/Hub restart recovery.
 
 In application repositories, prefer the repository's own scripts, then run:

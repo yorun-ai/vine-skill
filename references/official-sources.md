@@ -1,17 +1,31 @@
 # Vine Official Source Index
 
-Priority order: source and GoDoc at the target project's pinned revision > corresponding release notes > the website's current `next` documentation. Before Vine 1.0, the website does not provide per-release documentation snapshots.
+Priority order: source and GoDoc at the target project's pinned revision > corresponding release notes > the website's current `next` documentation. Before Vine 1.0, use tagged repository source for release-specific evidence and the website for current guidance.
 
 ## Research Baseline
 
-- Vine source: [`v0.13.2`](https://github.com/yorun-ai/vine/tree/v0.13.2), commit `fc17cec68b6b25e66929dadb3c4f1f71371cf13a`.
-- Skelc source: [`v0.14.0`](https://github.com/yorun-ai/skelc/tree/v0.14.0), commit `feffe824a394a6625e98cc8fd2a7f6339b6d3ced`.
-- Documentation source: [`6bcc1712`](https://github.com/yorun-ai/vine-site/tree/6bcc1712f05b2fe7ec50388a613908d6e3abebd1), reviewed 2026-08-18.
-- English website: [Vine Docs](https://vine.yorun.ai/docs/).
-- Chinese website: [Vine Docs in Chinese](https://vine.yorun.ai/zh-CN/docs/).
-- Go symbols: [pkg.go.dev/go.yorun.ai/vine](https://pkg.go.dev/go.yorun.ai/vine).
-- Skel language and generator: [Skel Docs](https://skel.yorun.ai/docs/).
-- Vine release history: [CHANGELOG.md](https://github.com/yorun-ai/vine/blob/main/CHANGELOG.md).
+Reviewed 2026-10-26. Release source is authoritative over website snippets.
+
+- Vine: [`v0.32.5`](https://github.com/yorun-ai/vine/tree/v0.32.5); [release changes and upgrade notes](https://github.com/yorun-ai/vine/blob/v0.32.5/CHANGELOG.md).
+- Skel/compiler: [`v0.34.0`](https://github.com/yorun-ai/skel/tree/v0.34.0), commit `1859e6b02251f7e32d68a8d7e52676c56897d9b2`; [release notes](https://github.com/yorun-ai/skel/blob/v0.34.0/CHANGELOG.md).
+- vRPC Go: [`v0.15.1`](https://github.com/yorun-ai/vrpc-go/tree/v0.15.1); shared HTTP codecs and external Go clients.
+- vRPC TS: [`v0.10.0`](https://github.com/yorun-ai/vrpc-ts/tree/v0.10.0); generated browser client runtime.
+- Documentation source reviewed: [`45a9f599`](https://github.com/yorun-ai/vine-site/tree/45a9f599a6cf3cec5f365a0247536f8625cb7f35). Some older snippets still use retired names; verify against released source.
+- Websites: [Vine](https://vine.yorun.ai/docs/), [Chinese Vine](https://vine.yorun.ai/zh-CN/docs/), [Skel](https://skel.yorun.ai/docs/).
+
+## Source Checks for This Baseline
+
+| Boundary | Pinned source |
+| --- | --- |
+| Standalone options and flags | [app/standalone/option.go](https://github.com/yorun-ai/vine/blob/v0.32.5/app/standalone/option.go) |
+| Testkit seed and generic clients | [app/testkit](https://github.com/yorun-ai/vine/tree/v0.32.5/app/testkit) |
+| Web proxy/assets facades | [core/web/api.go](https://github.com/yorun-ai/vine/blob/v0.32.5/core/web/api.go) |
+| Seed entries, rules and config | [Hub seeder](https://github.com/yorun-ai/vine/tree/v0.32.5/internal/daemon/hub/src/server/mod/seeder) |
+| Web timeout selection | [webtimeout](https://github.com/yorun-ai/vine/tree/v0.32.5/internal/daemon/webtimeout) |
+| Runtime/compiler floor | [internal/core/skel/version.go](https://github.com/yorun-ai/vine/blob/v0.32.5/internal/core/skel/version.go) |
+| Generated names and scalars | [Skel Go binding](https://github.com/yorun-ai/skel/tree/v0.34.0/internal/codegen/binding/golang), [types](https://github.com/yorun-ai/skel/tree/v0.34.0/types) |
+
+Internal source links supply research evidence; applications depend on the public facades. For migration decisions use [baseline-upgrade.md](baseline-upgrade.md); for a new baseline, reproduce generation, selected-module compilation and actual Portal calls.
 
 ## Website Topic Routes
 
@@ -54,4 +68,4 @@ Priority order: source and GoDoc at the target project's pinned revision > corre
 | Redis API | https://vine.yorun.ai/docs/redis |
 | RDB API | https://vine.yorun.ai/docs/rdb |
 
-Chinese pages insert `/zh-CN` before `/docs`. When reviewing documentation source, read the matching file under `docs/` in the `vine-site` repository; use `i18n/zh-CN/docusaurus-plugin-content-docs/current/` only when comparing the Chinese translation. For exact APIs, read public GoDoc and tests under `app/`, `core/`, and `infra/` at the target Vine tag. Do not treat `internal/` symbols as application APIs.
+Chinese pages insert `/zh-CN` before `/docs`. When reviewing documentation source, read the matching file under `docs/` in the `vine-site` repository; use `i18n/zh-CN/docusaurus-plugin-content-docs/current/` only when comparing the Chinese translation. For exact APIs, read public GoDoc and tests under `app/`, `core/`, and `infra/` at the target Vine tag. Use public package symbols in applications.
