@@ -57,6 +57,8 @@ At minimum, validate the files affected by the contribution:
 python3 scripts/validate_skill.py
 python3 -m unittest discover -s scripts -p 'test_*.py'
 bash -n scripts/start_vine_app.sh
+# For agent-host compatibility changes (requires Node.js >=22.20.0):
+python3 scripts/validate_hosts.py
 # For baseline, contract, example, or public API changes:
 bash scripts/validate_example.sh
 ```
@@ -75,15 +77,20 @@ Also verify:
 - realistic prompts route to the correct reference material;
 - generated fixtures, databases, dependencies, build output and credentials stay in disposable validation directories.
 
-When agent-host compatibility changes, install the package into a disposable project for Codex,
-Claude Code, and OpenCode. Confirm discovery, explicit invocation, linked-reference loading, a
-read-only task, and capability-denial behavior. Record the client and installer versions, static
-format checks and observed host behavior as separate validation results.
+When agent-host compatibility changes, run `scripts/validate_hosts.py` to check disposable
+project installation for Codex, Claude Code, OpenCode, Cursor, GitHub Copilot, Gemini CLI,
+Cline, Qwen Code and DSH. The validator checks installed resources and links without launching
+clients. In available client environments, confirm discovery, explicit invocation,
+linked-reference loading, a read-only task and capability-denial behavior using
+[the host smoke tests](references/agent-hosts.md#run-compatibility-smoke-tests).
+Record client and installer versions, static format checks and observed host behavior
+separately, and identify client sessions or installation scopes that remain untested.
 
 The example validation script works in a temporary directory, checks the actual module graph, compiles the frontend reference snippets, and exercises generated TypeScript clients and the real Hub Admin listener. It also generates `references/example-domains` with separate public/regular Go modules and tests bidirectional Rpc and Event delivery between two bundled Apps, including race checks. CI regenerates `references/example-greeting` with skelc `v0.34.0`, builds and tests it against
 Vine `v0.32.5`, runs `go vet`, rejects unformatted Go, and exercises the Windows launcher
 `--check` path with a disposable fixture. It also installs the package into a disposable project
-for Codex, Claude Code, and OpenCode and verifies both shared and Claude-specific skill copies.
+for eight installer-supported hosts and verifies the complete bundles at shared, Claude and
+Qwen project paths, plus a native DSH directory copy.
 
 When launcher behavior changes, test `--check`, first-run installation, readiness, occupied-port refusal, and cleanup in a disposable Vine browser-app fixture. Review Windows Batch changes on Windows or in Windows CI when available; otherwise report that limitation explicitly.
 

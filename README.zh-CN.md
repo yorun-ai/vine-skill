@@ -9,7 +9,7 @@
 [![skelc](https://img.shields.io/badge/skelc-v0.34.0-0097a7)](https://skel.yorun.ai/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-这是一个具备版本意识的 Agent Skill，可通过 Codex、Claude Code 或 OpenCode 开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务。新项目默认先交付服务端，只有明确确认后才追加前端。
+这是一个具备版本意识的 Agent Skill，可通过 Codex、Claude Code、OpenCode、Cursor、GitHub Copilot、Gemini CLI、DSH、Cline 或 Qwen Code 开发、排障、评审、测试、升级和部署 [Yorun Vine](https://github.com/yorun-ai/vine) 服务。新项目默认先交付服务端，只有明确确认后才追加前端。
 
 本仓库的实测工具链基线为 Vine `v0.32.5`、skelc `v0.34.0` 和 Go `1.27.3`；Go module 下限为 `1.27.0`。外部客户端使用 vRPC Go `v0.15.1` 和 vRPC TS `0.10.0` 验证。目标项目自身固定的版本始终优先。
 
@@ -24,6 +24,14 @@
 | Codex | `.agents/skills/vine-skill/` | `$vine-skill` |
 | Claude Code | `.claude/skills/vine-skill/` | `/vine-skill` |
 | OpenCode | `.opencode/skills/vine-skill/`、`.claude/skills/vine-skill/` 或 `.agents/skills/vine-skill/` | 要求 OpenCode 使用 `vine-skill` |
+| Cursor | `.agents/skills/vine-skill/` 或 `.cursor/skills/vine-skill/` | 在 Agent 对话中选择 `/vine-skill` |
+| GitHub Copilot（CLI / VS Code） | `.agents/skills/vine-skill/` 或 `.github/skills/vine-skill/` | `/vine-skill` |
+| Gemini CLI | `.agents/skills/vine-skill/` 或 `.gemini/skills/vine-skill/` | 要求 Gemini 使用 `vine-skill` |
+| DSH（DeepSeek Harness） | `.dsh/skills/vine-skill/` 或 `.agents/skills/vine-skill/` | 要求 DSH 使用 `vine-skill` |
+| Cline | `.agents/skills/vine-skill/` 或 `.cline/skills/vine-skill/` | `/vine-skill` 或要求 Cline 使用它 |
+| Qwen Code | `.qwen/skills/vine-skill/` 或 `.agents/skills/vine-skill/` | `/vine-skill` |
+
+兼容性依据为官方发现契约和安装包校验，客户端实际会话行为另行记录，详见[验证记录](./references/agent-hosts.md#validation-coverage)。DSH 需要文件系统 Skill provider；Cline 对共享目录的支持已通过 `v4.1.26` 源码确认。
 
 ## 核心行为
 
@@ -100,19 +108,36 @@ demo/
 
 安装前请确保固定版本安装器所需的 [Node.js](https://nodejs.org/) `>=22.20.0`，并至少安装了一个受支持的 agent host。
 
-为 Codex、Claude Code 和 OpenCode 全局安装 `vine-skill`：
+为固定版本安装器识别的 8 个客户端全局安装 `vine-skill`：
 
 ```bash
-npx --yes skills@1.5.23 add yorun-ai/vine-skill --global --agent codex claude-code opencode --skill vine-skill --yes
+npx --yes skills@1.5.23 add yorun-ai/vine-skill --global \
+  --agent codex claude-code opencode cursor github-copilot gemini-cli cline qwen-code \
+  --skill vine-skill --yes --copy
 ```
 
-项目级安装时移除 `--global`；只安装一个 host 时，仅在 `--agent` 后传一个值。按 host 支持的语法调用已安装 Skill：
+项目级安装时移除 `--global`；只安装一个 host 时，仅在 `--agent` 后传一个值。`--copy` 将完整包放到安装器对应的 host 目录；更新时重新运行命令。
+
+DSH 使用 Git 安装到新的用户级 Skill 目录（Bash 示例）：
+
+```bash
+git clone --depth 1 https://github.com/yorun-ai/vine-skill.git \
+  "${DSH_HOME:-$HOME/.dsh}/skills/vine-skill"
+```
+
+项目级安装将目标目录改为 `.dsh/skills/vine-skill`。DSH 的文件系统 provider 使用默认发现目录时，也能读取已有的共享 `.agents/skills/vine-skill` 安装。完整目录安装可保留引用资料与脚本。按 host 支持的语法调用已安装 Skill：
 
 | Host | 示例 |
 | --- | --- |
 | Codex | `使用 $vine-skill 创建一个 Vine 服务。` |
 | Claude Code | `/vine-skill 创建一个 Vine 服务。` |
 | OpenCode | `使用 vine-skill Skill 创建一个 Vine 服务。` |
+| Cursor | `/vine-skill 创建一个 Vine 服务。` |
+| GitHub Copilot | `/vine-skill 创建一个 Vine 服务。` |
+| Gemini CLI | `使用 vine-skill Skill 创建一个 Vine 服务。` |
+| DSH | `使用 vine-skill Skill 创建一个 Vine 服务。` |
+| Cline | `/vine-skill 创建一个 Vine 服务。` |
+| Qwen Code | `/vine-skill 创建一个 Vine 服务。` |
 
 官方发现目录、权限、故障排查和兼容性冒烟测试契约见 [agent-hosts.md](./references/agent-hosts.md)。
 
